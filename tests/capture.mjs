@@ -1,0 +1,11 @@
+import { chromium } from '@playwright/test';
+const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH}:{})});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});
+await page.goto('http://localhost:5173');
+await page.getByLabel('Include labeled demo reports').check();
+await page.getByRole('button').filter({hasText:'DEMO: Leaves cover part'}).waitFor();
+await page.locator('.site-header').scrollIntoViewIfNeeded();
+await page.screenshot({path:'docs/screenshots/dashboard.png',fullPage:true});
+await page.setViewportSize({width:390,height:844});
+await page.screenshot({path:'docs/screenshots/mobile-dashboard.png',fullPage:true});
+await browser.close();

@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+.git
+.env
+.env.*
+.data
+**/.data
+uploads
+**/uploads
+test-results
+playwright-report
+existing-repo

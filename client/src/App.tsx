@@ -1,0 +1,837 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUpRight,
+  CheckCheck,
+  ChevronRight,
+  CloudSun,
+  Droplets,
+  Eye,
+  Filter,
+  Leaf,
+  LoaderCircle,
+  MapPin,
+  Menu,
+  MessageCircle,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Waves,
+  X,
+} from "lucide-react";
+import DrainMap from "./DrainMap";
+import IncidentDetail from "./IncidentDetail";
+import ReportForm from "./ReportForm";
+import { api, date, list } from "./api";
+import {
+  categories,
+  statuses,
+  type Incident,
+  type IssueType,
+  type Stats,
+  type Status,
+  type Weather,
+} from "./types";
+const official =
+  "https://www.chapelhillnc.gov/Town-Government/Departments-and-Offices/Public-Works/Stormwater-Management/Flooding-and-Drainage";
+function Waterscape() {
+  return (
+    <svg
+      className="waterscape"
+      viewBox="0 0 720 350"
+      role="img"
+      aria-label="Illustration of green hills and a clear stream beneath a blue sky"
+    >
+      <defs>
+        <linearGradient id="sky" x2="0" y2="1">
+          <stop stopColor="#bcdfef" />
+          <stop offset="1" stopColor="#ecf8fa" />
+        </linearGradient>
+        <linearGradient id="water" x2="0" y2="1">
+          <stop stopColor="#8ed6dd" />
+          <stop offset="1" stopColor="#31899d" />
+        </linearGradient>
+        <linearGradient id="hill" x2="0" y2="1">
+          <stop stopColor="#b5d983" />
+          <stop offset="1" stopColor="#459370" />
+        </linearGradient>
+        <radialGradient id="sun">
+          <stop stopColor="#fffef2" />
+          <stop offset=".4" stopColor="#fffef2" stopOpacity=".85" />
+          <stop offset="1" stopColor="#fffef2" stopOpacity="0" />
+        </radialGradient>
+        <filter id="blur">
+          <feGaussianBlur stdDeviation="6" />
+        </filter>
+      </defs>
+      <rect width="720" height="350" fill="url(#sky)" />
+      <circle cx="554" cy="70" r="73" fill="url(#sun)" />
+      <g fill="white" opacity=".7" filter="url(#blur)">
+        <ellipse cx="174" cy="63" rx="75" ry="13" />
+        <ellipse cx="388" cy="102" rx="65" ry="10" />
+      </g>
+      <path
+        d="M0 206 Q124 103 264 176 Q404 98 548 166 Q667 113 720 135 V350 H0Z"
+        fill="#90bdac"
+        opacity=".6"
+      />
+      <path
+        d="M0 231 Q126 161 268 211 Q408 156 540 213 Q679 149 720 188 V350 H0Z"
+        fill="url(#hill)"
+      />
+      <path
+        d="M379 208 Q282 237 441 260 Q615 286 228 350 H670 Q775 299 492 256 Q350 232 408 212Z"
+        fill="url(#water)"
+      />
+      <path d="M0 254 Q148 218 311 248 Q293 292 84 350 H0Z" fill="#67a574" />
+      <path d="M0 280 Q129 234 255 267 Q163 301 152 350 H0Z" fill="#81ba73" />
+      <g fill="none" stroke="#ddf8f5" strokeLinecap="round" opacity=".65">
+        <path d="M382 230h24m-21 8h59m1 36h70m-33 8h78m-87 37h104m-152 15h103" />
+      </g>
+      <g fill="#326f5b">
+        <path d="M632 243v-70l-24 43h16l-21 27zm-11-29h23l-14-29zm40 39v-55l-21 35h13l-17 20z" />
+        <path d="M115 247v-54l-21 37h12l-16 17z" />
+      </g>
+      <g fill="#eff8d9" opacity=".6">
+        <circle cx="44" cy="297" r="2" />
+        <circle cx="78" cy="270" r="2" />
+        <circle cx="146" cy="274" r="2" />
+        <circle cx="202" cy="253" r="1.5" />
+      </g>
+    </svg>
+  );
+}
+export default function App() {
+  const [incidents, setIncidents] = useState<Incident[]>([]),
+    [stats, setStats] = useState<Stats>(),
+    [weather, setWeather] = useState<Weather>(),
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true),
+    [updated, setUpdated] = useState<Date>(),
+    [reportOpen, setReportOpen] = useState(false),
+    [selected, setSelected] = useState<Incident>(),
+    [category, setCategory] = useState("all"),
+    [status, setStatus] = useState("active"),
+    [query, setQuery] = useState(""),
+    [showDemo, setShowDemo] = useState(false),
+    [mobileNav, setMobileNav] = useState(false);
+  const draftToken = useMemo(
+    () =>
+      new URLSearchParams(location.search).get("draft") ||
+      location.pathname.match(/^\/confirm\/([^/]+)\/?$/)?.[1] ||
+      undefined,
+    [],
+  );
+  const [activeDraft, setActiveDraft] = useState(draftToken);
+  const refresh = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    void api<Weather>("/weather")
+      .then(setWeather)
+      .catch(() => setWeather(undefined));
+    const results = await Promise.allSettled([
+      api<Incident[] | { incidents: Incident[] }>("/incidents"),
+      api<Stats>("/stats"),
+    ]);
+    if (results[0].status === "fulfilled") {
+      setIncidents(list(results[0].value, "incidents"));
+      setError("");
+      setUpdated(new Date());
+    } else setError(results[0].reason.message);
+    if (results[1].status === "fulfilled") setStats(results[1].value);
+    else setStats(undefined);
+    setLoading(false);
+  }, []);
+  useEffect(() => {
+    void refresh();
+    const interval = setInterval(() => void refresh(true), 30000);
+    return () => clearInterval(interval);
+  }, [refresh]);
+  const filtered = useMemo(
+    () =>
+      incidents.filter(
+        (i) =>
+          (showDemo || !i.isDemo) &&
+          (category === "all" || i.issueType === category) &&
+          (status === "all" ||
+            (status === "active"
+              ? i.status !== "closed"
+              : i.status === status)) &&
+          `${i.description} ${categories[i.issueType]} ${i.id}`
+            .toLowerCase()
+            .includes(query.toLowerCase()),
+      ),
+    [incidents, category, status, query, showDemo],
+  );
+  const metrics = [
+    {
+      label: "Active incidents",
+      value: stats?.activeIncidents,
+      icon: Droplets,
+      note: "Awaiting or under review",
+      color: "blue",
+    },
+    {
+      label: "Community observations",
+      value: stats?.observationCount,
+      icon: Eye,
+      note: "Evidence from residents",
+      color: "green",
+    },
+    {
+      label: "Closed incidents",
+      value: stats?.closedIncidents,
+      icon: CheckCheck,
+      note: "With follow-up recorded",
+      color: "teal",
+    },
+    {
+      label: "Total incidents",
+      value: stats?.totalIncidents,
+      icon: MapPin,
+      note: "Real reports, all statuses",
+      color: "amber",
+    },
+  ];
+  function closeReport() {
+    setReportOpen(false);
+    if (activeDraft) {
+      setActiveDraft(undefined);
+      history.replaceState(
+        {},
+        "",
+        location.pathname.startsWith("/confirm/") ? "/" : location.pathname,
+      );
+    }
+  }
+  return (
+    <>
+      <a href="#dashboard" className="skip-link">
+        Skip to incident dashboard
+      </a>
+      <header className="site-header">
+        <div className="header-inner">
+          <a href="/" className="brand" aria-label="DrainDispatch home">
+            <span className="brand-mark">
+              <Droplets size={25} />
+            </span>
+            <span>
+              Drain<span className="brand-accent">Dispatch</span>
+              <small>COMMUNITY STORMWATER WATCH</small>
+            </span>
+          </a>
+          <nav
+            className={mobileNav ? "nav-open" : ""}
+            aria-label="Main navigation"
+          >
+            <a href="#dashboard" onClick={() => setMobileNav(false)}>
+              Live map
+            </a>
+            <a href="#community" onClick={() => setMobileNav(false)}>
+              How it works
+            </a>
+            <a href="#impact" onClick={() => setMobileNav(false)}>
+              Community impact
+            </a>
+          </nav>
+          <div className="header-actions">
+            <button
+              className="button primary report-header"
+              onClick={() => setReportOpen(true)}
+            >
+              <Plus size={17} />
+              Report a drain
+            </button>
+            <button
+              className="icon-button mobile-toggle"
+              onClick={() => setMobileNav(!mobileNav)}
+              aria-label="Toggle navigation"
+              aria-expanded={mobileNav}
+            >
+              {mobileNav ? <X /> : <Menu />}
+            </button>
+          </div>
+        </div>
+      </header>
+      <main>
+        <section className="hero">
+          <div className="hero-content">
+            <div className="eyebrow">
+              <span className="pulse-dot" />
+              CHAPEL HILL, NORTH CAROLINA
+            </div>
+            <h1>
+              Small observations.
+              <br />
+              <span>Healthier waterways.</span>
+            </h1>
+            <p>
+              See the blockage. Prevent the backup.
+              <br />
+              Help your community turn drainage concerns into a clearer picture
+              of what needs attention.
+            </p>
+            <div className="hero-actions">
+              <button
+                className="button primary"
+                onClick={() => setReportOpen(true)}
+              >
+                <Plus size={17} />
+                Share an observation
+              </button>
+              <a className="button hero-link" href="#dashboard">
+                Explore the map <ArrowDown size={17} />
+              </a>
+            </div>
+            <div className="hero-note">
+              <ShieldCheck size={15} />
+              Community reporting. Human review. Safer participation.
+            </div>
+          </div>
+          <div className="hero-art">
+            <Waterscape />
+            <div className="glass-bubble">
+              <span>
+                <Leaf size={22} />
+              </span>
+              <div>
+                <strong>Every observation adds clarity.</strong>
+                <small>Connected communities. Connected waterways.</small>
+              </div>
+            </div>
+            <div className="art-label">
+              <Waves size={15} />A little care, downstream.
+            </div>
+          </div>
+        </section>
+        <div className="main-shell">
+          <section
+            className="weather-strip"
+            aria-label="Official weather context"
+          >
+            <CloudSun size={24} />
+            <div>
+              <strong>
+                {weather?.alerts?.length
+                  ? weather.alerts[0].event
+                  : weather && !weather.unavailable
+                    ? "Official weather awareness"
+                    : "Weather context unavailable"}
+              </strong>
+              <span>
+                {weather?.alerts?.length
+                  ? weather.alerts[0].headline
+                  : weather && !weather.unavailable
+                    ? "No active rain, flood, or thunderstorm alerts returned for Chapel Hill. Conditions can change."
+                    : "Check the National Weather Service for current alerts."}
+              </span>
+            </div>
+            <a
+              href={weather?.alerts?.[0]?.url || "https://www.weather.gov/rah/"}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {weather?.alerts?.length
+                ? "Read official alert"
+                : "National Weather Service"}
+              <ArrowUpRight size={14} />
+            </a>
+          </section>
+          {weather?.alerts?.length ? (
+            <div className="notice weather-notice">
+              <ShieldCheck size={20} />
+              <span>
+                Stay out of floodwater and roadways. Follow official weather
+                instructions.{" "}
+                {weather.alerts.length > 1
+                  ? `${weather.alerts.length} active alerts. `
+                  : ""}
+                Updated{" "}
+                {weather.retrievedAt
+                  ? new Date(weather.retrievedAt).toLocaleTimeString([], {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })
+                  : "by NWS"}
+                .
+              </span>
+            </div>
+          ) : null}
+          <section className="metrics" aria-label="Measured community activity">
+            {metrics.map(({ label, value, icon: Icon, note, color }) => (
+              <article className="metric-card" key={label}>
+                <div className="metric-top">
+                  <span>{label}</span>
+                  <span className={`metric-icon ${color}`}>
+                    <Icon size={19} />
+                  </span>
+                </div>
+                <strong>
+                  {value === undefined ? "—" : value.toLocaleString()}
+                </strong>
+                <small>{note}</small>
+              </article>
+            ))}
+          </section>
+          <section className="dashboard-section" id="dashboard">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">OUR NEIGHBORHOOD, IN VIEW</span>
+                <h2>Community drainage map</h2>
+                <p>Explore reported concerns. Add context where it counts.</p>
+              </div>
+              <div className="live-controls">
+                <span className="live-label">
+                  <span className={`pulse-dot ${error ? "offline" : ""}`} />
+                  {error
+                    ? "Connection unavailable"
+                    : updated
+                      ? "Refreshes every 30 seconds"
+                      : "Connecting"}
+                </span>
+                <button
+                  className="button secondary compact"
+                  onClick={() => void refresh()}
+                  disabled={loading}
+                >
+                  <RefreshCw size={15} className={loading ? "spin" : ""} />
+                  Refresh
+                </button>
+              </div>
+            </div>
+            {error && (
+              <div className="notice error" role="alert">
+                <span>
+                  {error} Your report can be prepared while the service
+                  reconnects.
+                </span>
+                <button className="text-link" onClick={() => void refresh()}>
+                  Try again
+                </button>
+              </div>
+            )}
+            <div className="dashboard-panel">
+              <div className="map-toolbar">
+                <div className="search-field">
+                  <Search size={17} />
+                  <input
+                    aria-label="Search incident descriptions"
+                    placeholder="Search the neighborhood…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </div>
+                <label className="filter-select">
+                  <Filter size={15} />
+                  <select
+                    aria-label="Filter by issue type"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  >
+                    <option value="all">All concerns</option>
+                    {Object.entries(categories).map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <select
+                  aria-label="Filter by incident status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  <option value="active">Active incidents</option>
+                  <option value="all">All statuses</option>
+                  {Object.entries(statuses).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="map-and-list">
+                <div className="dashboard-map">
+                  <DrainMap incidents={filtered} onSelect={setSelected} />
+                  <div className="map-location-label">
+                    <MapPin size={14} />
+                    Chapel Hill, NC
+                  </div>
+                  <div className="map-legend">
+                    <span>
+                      <i className="legend-amber" />
+                      Drainage concern
+                    </span>
+                    <span>
+                      <i className="legend-blue" />
+                      Standing water
+                    </span>
+                    <span>
+                      <i className="legend-green" />
+                      Closed
+                    </span>
+                  </div>
+                </div>
+                <aside
+                  className="incident-list"
+                  aria-label="Filtered incidents"
+                >
+                  <div className="list-heading">
+                    <h3>In the neighborhood</h3>
+                    <span>{filtered.length}</span>
+                  </div>
+                  {loading && !updated ? (
+                    <div className="list-empty">
+                      <LoaderCircle size={28} className="spin" />
+                      <strong>Bringing the map into view…</strong>
+                    </div>
+                  ) : filtered.length ? (
+                    filtered.map((i) => (
+                      <button
+                        key={i.id}
+                        className="incident-card"
+                        onClick={() => setSelected(i)}
+                      >
+                        <div className="incident-card-top">
+                          <span className={`category-dot ${i.issueType}`}>
+                            <Droplets size={15} />
+                          </span>
+                          <strong>{categories[i.issueType]}</strong>
+                          <ChevronRight size={16} />
+                        </div>
+                        <p>{i.description}</p>
+                        <div className="incident-card-bottom">
+                          <span className={`status-badge ${i.status}`}>
+                            {statuses[i.status as Status]}
+                          </span>
+                          <span>
+                            <Eye size={12} />
+                            {i.observationCount}
+                          </span>
+                        </div>
+                        <small>
+                          {date(i.createdAt)}
+                          {i.isDemo ? " · Demo report" : ""}
+                        </small>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="list-empty">
+                      <span className="empty-icon">
+                        <Waves size={30} />
+                      </span>
+                      <strong>
+                        {error
+                          ? "The map is ready to reconnect"
+                          : incidents.length
+                            ? "No matching reports"
+                            : "A fresh start for the neighborhood"}
+                      </strong>
+                      <p>
+                        {error
+                          ? "Incidents will appear when the reporting service is available."
+                          : incidents.length
+                            ? "Try another filter to see more observations."
+                            : "Be the first to share a drainage observation. Your report will appear here after it is saved."}
+                      </p>
+                      <button
+                        className="button secondary compact"
+                        onClick={() => setReportOpen(true)}
+                      >
+                        <Plus size={15} />
+                        Add an observation
+                      </button>
+                    </div>
+                  )}
+                  <div className="list-footer">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={showDemo}
+                        onChange={(e) => setShowDemo(e.target.checked)}
+                      />
+                      Include labeled demo reports
+                    </label>
+                  </div>
+                </aside>
+              </div>
+              <div className="dashboard-bottom">
+                <span>
+                  <ShieldCheck size={14} />
+                  Community evidence, awaiting human review
+                </span>
+                <span>
+                  {updated
+                    ? `Last refreshed ${updated.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                    : "Waiting for data"}
+                </span>
+              </div>
+            </div>
+          </section>
+          <section className="community-section" id="community">
+            <div className="community-intro">
+              <span className="eyebrow">
+                FROM A MOMENT TO A MEANINGFUL REPORT
+              </span>
+              <h2>
+                Notice it. Share it.
+                <br /> Keep the picture clear.
+              </h2>
+              <p>
+                A leaf-covered grate or lingering puddle can be easy to
+                overlook. Your observation helps neighbors understand what is
+                happening and where follow-up is needed.
+              </p>
+              <a
+                href={official}
+                target="_blank"
+                rel="noreferrer"
+                className="text-link"
+              >
+                Connect with Town reporting resources <ArrowUpRight size={16} />
+              </a>
+            </div>
+            <div className="process-cards">
+              {[
+                {
+                  n: "01",
+                  icon: Eye,
+                  title: "Observe safely",
+                  text: "Take a photo or note what you see from a safe place. Stay out of roads and floodwater.",
+                },
+                {
+                  n: "02",
+                  icon: MapPin,
+                  title: "Pin & confirm",
+                  text: "Add the location and review nearby reports. Gemini can help describe photo evidence.",
+                },
+                {
+                  n: "03",
+                  icon: MessageCircle,
+                  title: "Build the picture",
+                  text: "Contribute to an existing incident or create one. Add follow-up evidence when things change.",
+                },
+              ].map(({ n, icon: Icon, title, text }) => (
+                <article key={n}>
+                  <div>
+                    <span className="process-icon">
+                      <Icon size={22} />
+                    </span>
+                    <small>{n}</small>
+                  </div>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+          <section id="impact" className="impact-section">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">
+                  MEASURED ACTIVITY, SHARED AWARENESS
+                </span>
+                <h2>A community taking notice</h2>
+                <p>Reporting trends from actual incidents and observations.</p>
+              </div>
+              <span className="data-source">
+                <span className="pulse-dot" />
+                {stats ? "Live database metrics" : "Metrics unavailable"}
+              </span>
+            </div>
+            <div className="analytics-grid">
+              <article className="analytics-card">
+                <div className="analytics-heading">
+                  <h3>What we're noticing</h3>
+                  <span>By concern type</span>
+                </div>
+                {Object.entries(categories).map(([key, label]) => {
+                  const count = Number(
+                      stats?.byCategory?.find(
+                        (c) => c.issueType === (key as IssueType),
+                      )?.count || 0,
+                    ),
+                    total = stats?.totalIncidents || 0;
+                  return (
+                    <div className="category-stat" key={key}>
+                      <div>
+                        <span>{label}</span>
+                        <strong>{stats ? count : "—"}</strong>
+                      </div>
+                      <div className="bar-track">
+                        <i
+                          className={key}
+                          style={{
+                            width: `${total ? (count / total) * 100 : 0}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <p className="chart-footnote">
+                  Demo records are excluded from these measurements.
+                </p>
+              </article>
+              <article className="analytics-card">
+                <div className="analytics-heading">
+                  <h3>Incidents over time</h3>
+                  <span>Daily incident reports · UTC</span>
+                </div>
+                {stats?.overTime?.length ? (
+                  <div
+                    className="timeline-chart"
+                    role="img"
+                    aria-label={stats.overTime
+                      .map((p) => `${date(p.date)}: ${p.count} reports`)
+                      .join("; ")}
+                  >
+                    {stats.overTime.slice(-14).map((p) => (
+                      <div className="chart-column" key={p.date}>
+                        <span>{p.count}</span>
+                        <i
+                          style={{
+                            height: `${Math.max(4, (Number(p.count) / Math.max(...stats.overTime.map((v) => Number(v.count)), 1)) * 100)}px`,
+                          }}
+                        />
+                        <small>
+                          {new Date(p.date).toLocaleDateString([], {
+                            month: "short",
+                            day: "numeric",
+                            timeZone: "UTC",
+                          })}
+                        </small>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="chart-empty">
+                    <Waves size={28} />
+                    <p>
+                      {stats
+                        ? "Your first reports will start the trend."
+                        : "Reporting metrics are unavailable right now."}
+                    </p>
+                  </div>
+                )}
+                <div className="repeated-note">
+                  <RefreshCw size={15} />
+                  <span>
+                    {stats
+                      ? `${stats.repeatedLocations?.length || 0} areas with repeated incident activity`
+                      : "Repeated-location data unavailable"}
+                  </span>
+                </div>
+                {!!stats?.repeatedLocations?.length && (
+                  <details className="recurring-areas">
+                    <summary>Explore recurring reporting areas</summary>
+                    <ul>
+                      {stats.repeatedLocations.map((area, index) => (
+                        <li key={index}>
+                          <span>
+                            {Number(area.latitude).toFixed(4)},{" "}
+                            {Number(area.longitude).toFixed(4)}
+                          </span>
+                          <strong>{area.count} incidents</strong>
+                        </li>
+                      ))}
+                    </ul>
+                    <p>
+                      Grouped by rounded coordinates. Nearby drains can be
+                      distinct.
+                    </p>
+                  </details>
+                )}
+              </article>
+              <article className="waterway-card">
+                <div className="waterway-art">
+                  <Waves size={42} />
+                  <Leaf size={27} />
+                </div>
+                <span className="eyebrow">EVERYTHING FLOWS TOGETHER</span>
+                <h3>
+                  Our streets connect
+                  <br />
+                  to our streams.
+                </h3>
+                <p>
+                  Visible drainage concerns are one part of a bigger water
+                  story. Better observations support awareness and informed
+                  follow-up.
+                </p>
+                <a
+                  href="https://www.chapelhillnc.gov/Town-Government/Departments-and-Offices/Public-Works/Stormwater-Management"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Explore local stormwater <ArrowUpRight size={15} />
+                </a>
+              </article>
+            </div>
+          </section>
+          <section className="participation-banner">
+            <span className="banner-icon">
+              <Droplets size={33} />
+            </span>
+            <div>
+              <h2>A little attention goes a long way.</h2>
+              <p>Make your next observation part of the community picture.</p>
+            </div>
+            <button
+              className="button primary"
+              onClick={() => setReportOpen(true)}
+            >
+              Report a drain <ArrowRight size={17} />
+            </button>
+          </section>
+        </div>
+      </main>
+      <footer>
+        <div className="footer-main">
+          <a className="brand" href="/">
+            <span className="brand-mark">
+              <Droplets size={23} />
+            </span>
+            <span>
+              Drain<span className="brand-accent">Dispatch</span>
+              <small>SEE THE BLOCKAGE. PREVENT THE BACKUP.</small>
+            </span>
+          </a>
+          <p>
+            A HackNC 2026 community prototype.
+            <br />
+            Independent of the Town of Chapel Hill.
+          </p>
+          <a href={official} target="_blank" rel="noreferrer">
+            Official stormwater resources <ArrowUpRight size={14} />
+          </a>
+        </div>
+        <div className="footer-bottom">
+          <span>
+            <ShieldCheck size={14} />
+            Observe safely. Never enter drains, floodwater, or active roadways.
+          </span>
+          <span>
+            Community reports do not automatically notify the Town. Not an
+            emergency service.
+          </span>
+        </div>
+      </footer>
+      {(reportOpen || activeDraft) && (
+        <ReportForm
+          draftToken={activeDraft}
+          onClose={closeReport}
+          onCreated={() => void refresh()}
+        />
+      )}{" "}
+      {selected && (
+        <IncidentDetail
+          incident={selected}
+          onClose={() => setSelected(undefined)}
+          onChanged={() => void refresh()}
+        />
+      )}
+    </>
+  );
+}
