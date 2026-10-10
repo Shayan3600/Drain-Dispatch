@@ -1,4 +1,4 @@
-import { createHash, createHmac } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
   AppError,
@@ -44,7 +44,7 @@ const inputSchema = z.object({
   chatId: z.string().min(1).max(500).optional(),
 });
 const help =
-  "DrainDispatch organizes community drainage observations. Send REPORT followed by a description, or send a JPEG, PNG, or WebP photo. We will send a private link to confirm the location before publishing. STATUS <incident UUID>; NEARBY <latitude> <longitude> <category>; OBSERVE <incident UUID> CONFIRM <description> (only after checking it is the same drain). Categories: blocked_drain, standing_water, damaged_drain, other. CONSENT enables private follow-up messages about reports you submit; STOP disables them. Follow-ups require the connected Photon worker and are only delivered to private conversations. Stay out of roadways, drains, and floodwater. This is not an emergency service.";
+  "DrainDispatch organizes community drainage observations. Send REPORT followed by a description, or send a JPEG, PNG, or WebP photo. We will send a private link to confirm the location before publishing. RESUME reopens your latest draft or confirmed report with a fresh private link. STATUS <incident UUID>; NEARBY <latitude> <longitude> <category>; OBSERVE <incident UUID> CONFIRM <description> (only after checking it is the same drain). Categories: blocked_drain, standing_water, damaged_drain, other. CONSENT enables private follow-up messages about reports you submit; STOP disables them. Follow-ups require the connected Photon worker and are only delivered to private conversations. Stay out of roadways, drains, and floodwater. This is not an emergency service.";
 const inFlight = new WeakMap<
   Reporting,
   Map<string, { payloadHash: string; operation: Promise<MessageReply> }>
@@ -173,6 +173,26 @@ async function command(
   const text = input.text.trim();
   const upper = text.toUpperCase();
   if (!input.photo && /^(HELP|HI|HELLO|HEY|START)$/.test(upper)) return help;
+  if (!input.photo && upper === "RESUME") {
+    if (!input.chatId) return "Send RESUME in a private conversation with DrainDispatch so your recovery link is not shared with a group.";
+    return reporting.db.transaction(async c => {
+      const receipt = (await c.query("SELECT response_text FROM message_receipts WHERE message_id=$1 FOR UPDATE", [key])).rows[0];
+      if (receipt?.response_text) return receipt.response_text as string;
+      const draft = (await c.query(`SELECT d.* FROM report_drafts d JOIN message_context m ON m.source_message_id=d.source_message_id
+        WHERE m.sender_hash=$1 ORDER BY d.created_at DESC LIMIT 1 FOR UPDATE OF d`, [keyed(options.secret, `sender:${input.senderId}`)])).rows[0];
+      let response: string;
+      if (!draft) response = "No report draft belongs to this messaging identity yet. Send REPORT with a description or photograph to start one.";
+      else {
+        const token = randomBytes(32).toString("base64url");
+        await c.query("UPDATE report_drafts SET token_hash=$2,expires_at=now()+interval '1 hour' WHERE id=$1", [draft.id, createHash("sha256").update(token).digest("hex")]);
+        const url = new URL(`/confirm/${token}`, options.appUrl ?? process.env.PUBLIC_APP_URL ?? "http://localhost:5173").toString();
+        response = `Your existing report and its saved evidence are preserved. Resume ${draft.confirmed_incident_id ? "your confirmed report inspection" : "location confirmation and review"} here: ${url} . This fresh private link expires in one hour and replaces the previous link. No additional incident was created.`;
+      }
+      // Token rotation and its cached response commit together, including recovery after a lost reply.
+      await c.query("UPDATE message_receipts SET response_text=$2 WHERE message_id=$1", [key, response]);
+      return response;
+    });
+  }
   if (!input.photo && /^(CONSENT|STOP)$/.test(upper)) {
     const consent = upper === "CONSENT";
     const senderHash = keyed(options.secret, `sender:${input.senderId}`);
@@ -235,7 +255,7 @@ async function command(
           .join("\n")}`
       : "No matching active reports from the last 30 days were found within 30 meters. Send REPORT and a description to start a new observation.";
   }
-  if (!input.photo && /^OBSERVE\b/i.test(text)) {
+  if (/^OBSERVE\b/i.test(text)) {
     const match = text.match(/^OBSERVE\s+(\S+)\s+CONFIRM\s+([\s\S]+)$/i);
     if (!match || !z.uuid().safeParse(match[1]).success)
       return "First check the incident on the website and confirm it concerns the same physical drain. Then send OBSERVE <incident UUID> CONFIRM <description>. No observation has been posted yet.";
@@ -247,14 +267,17 @@ async function command(
     if (!parsed.success)
       return "Include an observation description between 5 and 2,000 characters after CONFIRM.";
     try {
+      // Confirm the reference exists before storing any optional new photograph.
+      await reporting.detail(match[1]!);
+      const evidence = input.photo ? await persistPhoto(input.photo, reporting, options, key) : undefined;
       const result = await reporting.observe(
         match[1]!,
-        parsed.data,
+        { ...parsed.data, ...(evidence ? { photoId: evidence.photoId } : {}) },
         "imessage",
         `photon-${key}`,
       );
       await subscribe(reporting.db, result.incidentId, `photon-${key}`);
-      return `Observation saved to incident ${result.incidentId}. Thank you for documenting visible evidence. This does not verify a repair or municipal action.`;
+      return `${evidence?.analysisNote ?? ""}Observation saved to incident ${result.incidentId}. ${evidence?.assessment ? `AI uncertainty: ${evidence.assessment.uncertainty}; findings remain subject to review. ` : ""}Thank you for documenting visible evidence. This does not verify a repair or municipal action.`;
     } catch (error) {
       if (error instanceof AppError && error.status === 404)
         return "That incident was not found. Check the full reference before sending another observation.";
@@ -268,41 +291,7 @@ async function command(
   let assessment: Assessment | undefined;
   let analysisNote = "";
   if (input.photo) {
-    const images = options.images ?? {
-      sanitize: sanitizeImage,
-      store: storeImage,
-      analyze: analyzeImage,
-    };
-    photoId = photoUuid(key);
-    const existing = (
-      await reporting.db.query("SELECT assessment FROM photos WHERE id=$1", [
-        photoId,
-      ])
-    ).rows[0];
-    if (existing) assessment = existing.assessment ?? undefined;
-    else {
-      const sanitized = await images.sanitize(input.photo);
-      const stored = await images.store(sanitized);
-      try {
-        assessment = await images.analyze(sanitized);
-      } catch {
-        analysisNote =
-          "Photo saved; AI analysis is unavailable. Review and describe the visible evidence yourself. ";
-      }
-      await reporting.db.query(
-        "INSERT INTO photos(id,url,storage_key,mime_type,assessment) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO NOTHING",
-        [
-          photoId,
-          stored.url,
-          stored.storageKey,
-          sanitized.mimeType,
-          assessment ? JSON.stringify(assessment) : null,
-        ],
-      );
-    }
-    if (!assessment)
-      analysisNote =
-        "Photo saved; AI analysis is unavailable. Review and describe the visible evidence yourself. ";
+    ({ photoId, assessment, analysisNote } = await persistPhoto(input.photo, reporting, options, key));
     if (!description)
       description =
         assessment?.visibleEvidence ??
@@ -321,4 +310,19 @@ async function command(
   );
   const url = new URL(`/confirm/${draft.token}`, base).toString();
   return `${analysisNote}${assessment ? `AI suggestion: ${assessment.suggestedCategory.replaceAll("_", " ")}; uncertainty ${assessment.uncertainty}. ${assessment.visibleEvidence} ` : ""}Confirm the location and edit the report here: ${url} . Link expires in one hour. No incident is public until you confirm; a photo cannot establish GPS location. Stay out of roadways, drains, and floodwater.`;
+}
+
+async function persistPhoto(photo: Buffer, reporting: Reporting, options: HandlerOptions, key: string) {
+  const images = options.images ?? { sanitize: sanitizeImage, store: storeImage, analyze: analyzeImage };
+  const photoId = photoUuid(key);
+  let assessment: Assessment | undefined;
+  const existing = (await reporting.db.query("SELECT assessment FROM photos WHERE id=$1", [photoId])).rows[0];
+  if (existing) assessment = existing.assessment ?? undefined;
+  else {
+    const sanitized = await images.sanitize(photo);
+    const stored = await images.store(sanitized);
+    try { assessment = await images.analyze(sanitized); } catch { /* Preserve actual photo evidence when optional AI is unavailable. */ }
+    await reporting.db.query("INSERT INTO photos(id,url,storage_key,mime_type,assessment) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO NOTHING", [photoId, stored.url, stored.storageKey, sanitized.mimeType, assessment ? JSON.stringify(assessment) : null]);
+  }
+  return { photoId, assessment, analysisNote: assessment ? "" : "Photo saved; AI analysis is unavailable. Review and describe the visible evidence yourself. " };
 }

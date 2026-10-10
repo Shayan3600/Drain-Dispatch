@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import sharp from "sharp";
 import { v2 as cloudinary } from "cloudinary";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { z } from "zod";
 
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -85,7 +85,7 @@ export async function sanitizeImage(buffer: Buffer): Promise<SanitizedImage> {
   const format = imageFormat(buffer);
   if (!format)
     throw new ImageServiceError(
-      "Only JPEG, PNG, and WebP photographs are supported.",
+      "Only JPEG, PNG, and WebP photographs are supported. For an iPhone HEIC photo, send a JPEG/PNG screenshot or take a new photo using Camera > Formats > Most Compatible.",
       415,
       "unsupported_image",
     );
@@ -249,6 +249,80 @@ const responseSchema = {
   ],
 };
 
+/** Validate provider output before it can be persisted or shown as an editable suggestion. */
+export function parseAssessmentResponse(text: string): Assessment {
+  const assessment = assessmentSchema.parse(JSON.parse(text));
+  // Obstruction/damage claims require a visible drain, even if a provider ignores the prompt.
+  if (
+    !assessment.drainVisible &&
+    ["blocked_drain", "damaged_drain"].includes(assessment.suggestedCategory)
+  ) {
+    return {
+      ...assessment,
+      suggestedCategory: "other",
+      humanReviewRecommended: true,
+      uncertainty: "high",
+    };
+  }
+  return assessment;
+}
+
+/** Translate service failures without retaining or exposing provider messages or request URLs. */
+export function safeAnalysisFailure(error: unknown): ImageServiceError {
+  if (error instanceof z.ZodError || error instanceof SyntaxError) {
+    return new ImageServiceError(
+      "Photo analysis returned an incomplete assessment. Try again or describe your observation yourself.",
+      503,
+      "ai_response_invalid",
+    );
+  }
+  const status = error && typeof error === "object" && "status" in error
+    ? (error as { status: unknown }).status : undefined;
+  if (status === 429) return new ImageServiceError(
+    "Photo analysis has reached the configured service quota or rate limit. Try later or enter your observation yourself.",
+    503,
+    "ai_rate_limited",
+  );
+  if (status === 401 || status === 403) return new ImageServiceError(
+    "Photo analysis is unavailable with the configured credentials or permissions. You can still describe your observation yourself.",
+    503,
+    "ai_access_denied",
+  );
+  if (status === 404) return new ImageServiceError(
+    "The configured photo analysis model is unavailable. Check GEMINI_MODEL or enter your observation yourself.",
+    503,
+    "ai_model_unavailable",
+  );
+  if (status === 500 || status === 502 || status === 503) return new ImageServiceError(
+    "Photo analysis is temporarily unavailable. Try again later or enter your observation yourself.",
+    503,
+    "ai_service_unavailable",
+  );
+  if (status === 408 || status === 504) return new ImageServiceError(
+    "Photo analysis took too long. Try again or enter your observation yourself.",
+    503,
+    "ai_timeout",
+  );
+  if (error instanceof Error && (
+    ["AbortError", "TimeoutError"].includes(error.name) ||
+    /\babort(?:ed)?\b|timed?\s*out|timeout/i.test(error.message)
+  )) return new ImageServiceError(
+    "Photo analysis took too long. Try again or enter your observation yourself.",
+    503,
+    "ai_timeout",
+  );
+  if (error instanceof Error && /fetch failed|ENOTFOUND|ECONNRESET|EAI_AGAIN|network/i.test(error.message)) return new ImageServiceError(
+    "The photo analysis service could not be reached. Check connectivity, try again, or enter your observation yourself.",
+    503,
+    "ai_network_unavailable",
+  );
+  return new ImageServiceError(
+    "Photo analysis did not complete. Try again or enter your own observation; check Gemini credentials, model access, and service availability.",
+    503,
+    "ai_failed",
+  );
+}
+
 export async function analyzeImage(image: SanitizedImage): Promise<Assessment> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey)
@@ -259,8 +333,9 @@ export async function analyzeImage(image: SanitizedImage): Promise<Assessment> {
     );
   try {
     const ai = new GoogleGenAI({ apiKey });
+    const model = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite";
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL ?? "gemini-3.8-flash",
+      model,
       contents: [
         {
           role: "user",
@@ -280,28 +355,15 @@ export async function analyzeImage(image: SanitizedImage): Promise<Assessment> {
       config: {
         responseMimeType: "application/json",
         responseJsonSchema: responseSchema,
-        abortSignal: AbortSignal.timeout(30_000),
+        // This bounded classification task does not need the model's default dynamic thinking.
+        thinkingConfig: /^gemini-3[.-]/.test(model)
+          ? { thinkingLevel: ThinkingLevel.LOW }
+          : undefined,
+        abortSignal: AbortSignal.timeout(60_000),
       },
     });
-    const assessment = assessmentSchema.parse(JSON.parse(response.text ?? ""));
-    // A suggested drain obstruction or damage without a visible drain needs review.
-    if (
-      !assessment.drainVisible &&
-      ["blocked_drain", "damaged_drain"].includes(assessment.suggestedCategory)
-    ) {
-      return {
-        ...assessment,
-        suggestedCategory: "other",
-        humanReviewRecommended: true,
-        uncertainty: "high",
-      };
-    }
-    return assessment;
-  } catch {
-    throw new ImageServiceError(
-      "Photo analysis did not complete. Try again or enter your own observation; check Gemini credentials, model access, and service availability.",
-      503,
-      "ai_failed",
-    );
+    return parseAssessmentResponse(response.text ?? "");
+  } catch (error) {
+    throw safeAnalysisFailure(error);
   }
 }

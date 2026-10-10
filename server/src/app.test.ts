@@ -17,6 +17,12 @@ test("persistent PostgreSQL API: reports, retries, matching, observations, moder
   let db = await openDatabase(path.join(dir, "db"));
   let app = createApp(db);
   try {
+    for (const privatePath of ['/.env', '/server/.env', '/client/.env', '/.env.production', '/tiger-cloud-drain_dispatch-credentials.env', '/.git/config', '/%2eenv', '/@fs/private']) {
+      assert.equal((await request(app).get(privatePath)).status, 404);
+    }
+    const safeHealth = await request(app).get('/api/health');
+    assert.ok(safeHealth.headers.ratelimit);
+    assert.match(safeHealth.headers['content-security-policy'], /img-src[^;]*https:/);
     assert.equal((await request(app).post('/api/incidents').send({description:'x'.repeat(70_000)})).status,413);
     assert.equal(
       (await request(app).get("/api/health")).body.databaseMode,
@@ -209,6 +215,14 @@ test("persistent PostgreSQL API: reports, retries, matching, observations, moder
     await db.close();
     db = await openDatabase(path.join(dir, "db"));
     app = createApp(db);
+    const unsupportedIphonePhoto = await request(app)
+      .post("/api/uploads")
+      .attach("photo", Buffer.from("unsupported-format-test"), {
+        filename: "iphone.heic",
+        contentType: "image/heic",
+      });
+    assert.equal(unsupportedIphonePhoto.status, 415);
+    assert.match(unsupportedIphonePhoto.body.error.message, /Most Compatible/);
     assert.equal(
       (await request(app).get(`/api/incidents/${id}`)).body.observationCount,
       2,

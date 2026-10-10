@@ -10,7 +10,75 @@ import {
   analyzeImage,
   ImageServiceError,
   MAX_IMAGE_BYTES,
+  parseAssessmentResponse,
+  safeAnalysisFailure,
 } from "./images.js";
+
+test("structured photo assessments reject missing, extra, malformed, and unsupported fields", () => {
+  const valid = {
+    drainVisible: false,
+    suggestedCategory: "other",
+    visibleEvidence: "A red circle and a blue rectangle are visible; this is not a drain photograph.",
+    humanReviewRecommended: true,
+    uncertainty: "low",
+  };
+  assert.deepEqual(parseAssessmentResponse(JSON.stringify(valid)), valid);
+  const { uncertainty: _uncertainty, ...missing } = valid;
+  for (const value of [
+    missing,
+    { ...valid, drainVisible: "false" },
+    { ...valid, uncertainty: "certain" },
+    { ...valid, suggestedCategory: "flooding_prevented" },
+    { ...valid, visibleEvidence: " " },
+    { ...valid, visibleEvidence: "x".repeat(1601) },
+    { ...valid, streetAddress: "invented street address" },
+  ]) assert.throws(() => parseAssessmentResponse(JSON.stringify(value)));
+  assert.throws(() => parseAssessmentResponse("not JSON"));
+});
+
+test("claims of a blocked or damaged drain without a visible drain require correction and human review", () => {
+  for (const suggestedCategory of ["blocked_drain", "damaged_drain"] as const) {
+    const assessment = parseAssessmentResponse(JSON.stringify({
+      drainVisible: false,
+      suggestedCategory,
+      visibleEvidence: "The image is obscured and no drain is visible.",
+      humanReviewRecommended: false,
+      uncertainty: "low",
+    }));
+    assert.equal(assessment.suggestedCategory, "other");
+    assert.equal(assessment.humanReviewRecommended, true);
+    assert.equal(assessment.uncertainty, "high");
+  }
+  const standingWater = parseAssessmentResponse(JSON.stringify({
+    drainVisible: false,
+    suggestedCategory: "standing_water",
+    visibleEvidence: "Water is visible on a paved surface; its cause is not evident.",
+    humanReviewRecommended: true,
+    uncertainty: "medium",
+  }));
+  assert.equal(standingWater.suggestedCategory, "standing_water");
+});
+
+test("provider failures become actionable safe errors without leaking credentials or request data", () => {
+  const secret = "private-api-key-and-request-url";
+  for (const [error, code] of [
+    [{ status: 429, message: secret }, "ai_rate_limited"],
+    [{ status: 403, message: secret }, "ai_access_denied"],
+    [{ status: 404, message: secret }, "ai_model_unavailable"],
+    [{ status: 503, message: secret }, "ai_service_unavailable"],
+    [{ status: 504, message: secret }, "ai_timeout"],
+    [new SyntaxError(secret), "ai_response_invalid"],
+    [Object.assign(new Error(secret), { name: "TimeoutError" }), "ai_timeout"],
+    [new Error(`fetch failed: ${secret}`), "ai_network_unavailable"],
+    [new Error(secret), "ai_failed"],
+  ] as const) {
+    const safe = safeAnalysisFailure(error);
+    assert.equal(safe.code, code);
+    assert.equal(safe.status, 503);
+    assert.ok(!safe.message.includes(secret));
+    assert.equal(safe.cause, undefined);
+  }
+});
 
 test("sanitizes supported image bytes to JPEG, rotates and removes GPS/EXIF metadata", async () => {
   const original = await sharp({

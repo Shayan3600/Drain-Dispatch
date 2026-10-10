@@ -138,7 +138,7 @@ export default function IncidentDetail({
                   </span>
                   <div>
                     <strong>
-                      {o.source === "photon"
+                      {o.source === "photon" || o.source === "imessage"
                         ? "Messaging observation"
                         : "Community observation"}
                     </strong>

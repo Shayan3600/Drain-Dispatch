@@ -1,7 +1,10 @@
 import "./config.js";
 import { openDatabase } from "./db/database.js";
 import { createApp } from "./app.js";
-const db = await openDatabase();
+const db = await openDatabase().catch(() => {
+  console.error("Database startup failed. Check private PostgreSQL configuration and connectivity; no credentials are logged.");
+  process.exit(1);
+});
 const port = Number(process.env.PORT || 3001);
 const server = createApp(db).listen(port, () =>
   console.log(

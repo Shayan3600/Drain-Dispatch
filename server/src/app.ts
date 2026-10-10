@@ -1,4 +1,4 @@
-import "./config.js";
+import { resolveSpectrumCredentials } from "./config.js";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -41,8 +41,26 @@ export function createApp(db: Database) {
   const app = express(),
     reporting = new Reporting(db);
   app.disable("x-powered-by");
+  app.use((req, res, next) => {
+    let requestedPath: string;
+    try { requestedPath = decodeURIComponent(req.path); }
+    catch { res.status(400).end(); return; }
+    if (/(?:^|\/)(?:\.env(?:\.|$)|\.git(?:\/|$)|[^/]*credentials[^/]*|[^/]+\.env(?:\.|$)|@fs(?:\/|$)|server(?:\/|$)|scripts(?:\/|$))/i.test(requestedPath)) {
+      res.status(404).json({error:{code:"NOT_FOUND",message:"Endpoint not found."}});
+      return;
+    }
+    next();
+  });
   if (process.env.TRUST_PROXY === "1") app.set("trust proxy", 1);
-  app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        // Production pages load public map tiles and Cloudinary/legacy HTTPS photo evidence.
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+      },
+    },
+  }));
   const origins = (process.env.CLIENT_ORIGIN || "http://localhost:5173").split(
     ",",
   );
@@ -77,7 +95,7 @@ export function createApp(db: Database) {
           new AppError(
             415,
             "UNSUPPORTED_IMAGE",
-            "Choose a JPEG, PNG or WebP photo.",
+            "Choose a JPEG, PNG or WebP photo. For iPhone HEIC, send a JPEG/PNG screenshot or take a new photo using Camera > Formats > Most Compatible.",
           ),
         );
       else cb(null, true);
@@ -123,8 +141,8 @@ export function createApp(db: Database) {
       capabilities: {
         gemini: !!process.env.GEMINI_API_KEY,
         photon:
-          !!process.env.PHOTON_PROJECT_ID &&
-          !!process.env.PHOTON_PROJECT_SECRET,
+          !!resolveSpectrumCredentials(process.env).projectId &&
+          !!resolveSpectrumCredentials(process.env).projectSecret,
         storage:
           process.env.IMAGE_STORAGE === "local"
             ? "local"

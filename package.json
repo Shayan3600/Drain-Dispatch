@@ -12,6 +12,7 @@
     "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
     "test": "npm run test -w server",
     "test:browser": "playwright test",
+    "security:scan": "node scripts/security-scan.mjs",
     "start": "npm run start -w server",
     "worker": "npm run worker -w server",
     "db:migrate": "npm run db:migrate -w server",
