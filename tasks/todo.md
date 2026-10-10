@@ -42,7 +42,7 @@
 ## Polish and launch
 - [x] Responsive accessible Frutiger Aero interface and loading/error states.
 - [x] Typecheck, build, backend tests, browser reporting/reload/detail flow, mobile QA.
-- [ ] Commit and publish verified source to the new repository.
+- [x] Commit and publish verified source to the new repository.
 - [ ] Frontend/API/Photon worker deployment and production database/CORS checks.
 - [ ] .tech domain only if available with no paid purchase.
 - [x] Demo records clearly labeled and excluded from real metrics by default.
@@ -59,6 +59,8 @@ Local prototype verified October 10, 2026:
 - npm audit reports zero vulnerabilities; compatible patched OpenTelemetry override retained. See integration-status.md for the npm ls reporting limitation.
 - Desktop/mobile screenshots inspected; three labeled demonstration records persist locally and do not affect real metrics.
 - Local API and website run on ports 3001 and 5173. NWS alert retrieval succeeded locally; weather failures also have an unavailable state.
+- Published source to the private [Shayan3600/Drain-Dispatch repository](https://github.com/Shayan3600/Drain-Dispatch). Local main follows origin/main; the original local commit is preserved on local-checkpoint.
+- [GitHub CI run 38077385193](https://github.com/Shayan3600/Drain-Dispatch/actions/runs/38077385193) passed against source commit e1a326a6383e058bef4ab326957bbafdc7e686dc: fresh Linux npm ci, typecheck, 26 tests, build, five browser tests and dependency audit.
 - .env, local database, uploads and generated artifacts are excluded from Git. Docker/Railway/Vercel/CI configuration exists; no public deployment or Docker runtime has been verified.
 
 Remaining launch blockers: no live Gemini, Photon, Tiger Data, Cloudinary or hosting credentials. Real representative-image evaluation, live send/reply/status notification tests, public URLs, production database/CORS/worker checks, .tech domain, recorded live backup and rehearsal remain pending. No sponsor eligibility involving a real service is claimed. All originally requested features remain in scope.
