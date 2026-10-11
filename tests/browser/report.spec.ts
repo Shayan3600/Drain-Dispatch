@@ -48,7 +48,10 @@ test("browser creates a report, reloads it, and adds follow-up evidence", async 
     .getByRole("button", { name: "Add observation", exact: true })
     .click();
   await expect(page.getByText("Your observation was saved.")).toBeVisible();
-  await expect(page.getByText("2 observations", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Incident & observations" })
+      .getByText("2 observations", { exact: true }),
+  ).toBeVisible();
 });
 test("mobile dashboard fits viewport and opens accessible report dialog", async ({
   page,
