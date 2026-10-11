@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import path from "node:path";
 import express from "express";
 import { openDatabase, projectRoot } from "../server/src/db/database.js";
@@ -27,16 +27,20 @@ process.env.CLIENT_ORIGIN=origin;
 // Explicit path bypasses remote configuration in openDatabase; local-only seeder checks mode again.
 const db = await openDatabase(databasePath);
 try {
-  const result = await seedCityShowcase(db);
+  const referencePhotos = process.argv.includes("--reference-photos");
+  const result = await seedCityShowcase(db,new Date(),{referencePhotos});
   await mkdir(uploadsPath,{recursive:true});
-  for (const photo of result.photos) await writeFile(path.join(uploadsPath,photo.filename),showcaseIllustration(photo));
+  for (const photo of result.photos) {
+    if (photo.referenceFilename) await copyFile(path.join(projectRoot,"server/demo-assets/city",photo.referenceFilename),path.join(uploadsPath,photo.filename));
+    else await writeFile(path.join(uploadsPath,photo.filename),showcaseIllustration(photo));
+  }
   app.use(createApp(db));
   const clientDist = path.join(projectRoot,"client/dist");
   app.use(express.static(clientDist));
   app.get("/{*path}",(_req,res)=>res.sendFile(path.join(clientDist,"index.html")));
   ready = true;
   const summary = { url:`${origin}/city`, apiOrigin:origin, databasePath, pid:process.pid, reports:result.reports, observations:result.observations, photos:result.photos.length, historyEvents:result.historyEvents, statusChanges:result.statusChanges, synthetic:true };
-  await writeFile(path.join(projectRoot,".data/city-showcase-active.json"),JSON.stringify(summary,null,2));
+  await writeFile(path.join(projectRoot,referencePhotos ? ".data/city-showcase-photos-active.json" : ".data/city-showcase-active.json"),JSON.stringify(summary,null,2));
   console.log(JSON.stringify(summary,null,2));
   console.log("ClearFlow: saved database reports load automatically. Choose All statuses to see all 48. No cloud integrations or notifications were invoked.");
 } catch (error) {
