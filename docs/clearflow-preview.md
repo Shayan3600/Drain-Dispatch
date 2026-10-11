@@ -32,12 +32,14 @@ Verified locally:
 - Desktop and mobile visual checks preserve the supplied artwork and show no horizontal overflow. Performance controls support reduced motion, keyboard dismissal and restored focus. Screenshots contain only synthetic data and remain local.
 - The expanded test suite initially exhausted a shared localhost rate-limit bucket. Independent synthetic client identities in the isolated e2e harness fix test isolation; production rate limits are unchanged.
 
-Repeat source/index/history/public-build secret scans are required before publication. A reviewable preview PR and local preview will be recorded after those checks. Production remains unchanged. This preview does not establish a fresh live hosted iMessage test; real sponsor acceptance from the existing release remains documented separately.
+Repeat source/index/history/public-build secret scans pass before publication. [Preview PR #6](https://github.com/Shayan3600/Drain-Dispatch/pull/6) contains the combined release on `development/clearflow-preview`, retaining PR #5's original signed history. Production remains unchanged. This preview does not establish a fresh live hosted iMessage test; real sponsor acceptance from the existing release remains documented separately.
 
 ## Employee integration acceptance
 
 The combined version passes 51 backend tests, including additive/idempotent demo seeding and refusal to seed a remote database, and all 28 Brave browser tests with a clean exit. Synthetic desktop/mobile employee screenshots show no overflow or mutation requests. A single loaded display-font face is shared between community and employee pages.
 
-The separate loopback preview uses a fresh local PostgreSQL database with 48 labeled synthetic reports, 152 observations, 48 illustrations and 200 history events. Preview verification loads a saved photo, denies five credential/internal paths, returns 401 on three unauthenticated protected routes, rejects an invalid public submission and retains the original record count. Existing local and hosted data are untouched. Publication CI remains pending until recorded in the PR.
+The separate loopback preview uses a fresh local PostgreSQL database with 48 labeled synthetic reports, 152 observations, 48 illustrations and 200 history events. Preview verification loads a saved photo, denies five credential/internal paths, returns 401 on three unauthenticated protected routes, rejects an invalid public submission and retains the original record count. Existing local and hosted data are untouched.
+
+GitHub push and PR CI pass on combined source commit `f804b89`, including history/source scanning, clean installation, typecheck, backend tests, production build, Docker runtime and Linux browser tests. [PR check run](https://github.com/Shayan3600/Drain-Dispatch/actions/runs/38120089517). The team Notion plan records the preview workflow and preserves previous assignments and production evidence.
 
 To review from a fresh checkout: build, run `node --import tsx scripts/city-showcase.ts`, open its printed loopback origin, and use Employee login. Community demo counts require **Include labeled demo reports**; employee review includes labeled DEMO records automatically. The launcher owns a separate process and database; stop only that process when finished. No public tunnel is created for this preview.
