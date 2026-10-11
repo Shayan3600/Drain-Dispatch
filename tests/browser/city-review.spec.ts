@@ -14,7 +14,7 @@ test("city fixture review stays read-only and highlights one incident marker on 
   await expect(page.getByRole("heading", {name:"Drain reports.",exact:true})).toBeVisible();
   await expect(page.locator(".cr-card")).toHaveCount(2);
   await page.locator(".cr-card").filter({ hasText: "leaves covering a drain grate" }).click();
-  await expect(page.locator(".cr-evidence h3").first()).toContainText("DEMO / TEST");
+  await expect(page.locator(".cr-evidence .cr-demo")).toHaveCount(0);
   await expect(page.locator(".cr-observation")).toHaveCount(2);
   await expect(page.locator(".cr-map .leaflet-marker-icon")).toHaveCount(2);
   await expect(page.locator(".cr-map .map-pin.chosen")).toHaveCount(1);
@@ -60,7 +60,7 @@ test("city database review includes persisted demo records by default without ex
   await expect(page).toHaveTitle("ClearFlow · City Review");
   await expect(page.locator(".cr-card")).toHaveCount(2);
   await page.locator(".cr-card").filter({ hasText: "approved test photograph report" }).click();
-  await expect(page.locator(".cr-evidence h3").first()).toContainText("DEMO / TEST");
+  await expect(page.locator(".cr-evidence .cr-demo")).toHaveCount(0);
   await expect(page.locator(".cr-evidence")).not.toContainText("SYNTHETIC DEMO");
   const packet = page.getByRole("textbox", { name: "Report packet preview" });
   await expect(packet).toHaveValue(/DEMO \/ TEST REPORT — excluded from real community metrics/);
