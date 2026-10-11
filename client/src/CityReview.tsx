@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import CityReviewMap, { insideReviewBounds, type ReviewBounds } from "./CityReviewMap";
 import CitySelect from "./CitySelect";
+import CityEvidencePhoto from "./CityEvidencePhoto";
 import PacketPreview from "./PacketPreview";
 import { api } from "./api";
 import { createCityReviewData } from "./cityReviewData";
@@ -26,7 +27,7 @@ function photoSource(value?: string) {
     // Uploaded image paths may belong to a separately hosted API.
     const apiOrigin = (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_URL;
     const url = new URL(value, apiOrigin || window.location.origin);
-    return ["http:", "https:"].includes(url.protocol) ? url.href : undefined;
+    return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url.href : undefined;
   } catch { return undefined; }
 }
 const eventNames: Record<string, string> = {
@@ -130,7 +131,7 @@ export default function CityReview({ onSignOut }: { onSignOut?: () => void } = {
         <div className="cr-panel-heading"><h2>Review queue</h2><span className="cr-panel-count" aria-label={`${visible.length} matching reports`}>{visible.length}</span></div>
         <div className="cr-queue-items">
         {loading ? <p role="status">Loading reports…</p> : !visible.length ? <div className="cr-empty"><h3>{error ? "No reports loaded" : "No matching reports"}</h3><p>{error ? "Reconnect the reporting API and refresh." : "Try changing your filters or refresh after a report is saved."}</p></div> : visible.map(item => <button key={item.id} className={`cr-card ${item.id === selected?.id ? "cr-selected" : ""}`} style={{"--cr-report-color":cityMarkerStyle(item).color} as CSSProperties} aria-pressed={item.id === selected?.id} onClick={() => setSelectedId(item.id)}>
-          <span className="cr-card-top"><strong>{categories[item.issueType]}</strong>{item.isDemo && <span className="cr-demo">DEMO</span>}</span>
+          <span className="cr-card-top"><strong>{categories[item.issueType]}</strong></span>
           <p>{item.description}</p><span className="cr-card-meta"><span className="cr-status" data-status={item.status}>{statuses[item.status]}</span><span className="cr-count">{item.observationCount} submission{item.observationCount === 1 ? "" : "s"}</span></span>
           <small>Latest observation {timestamp(item.latestObservationAt)}</small>
           <span className="cr-cue">{item.hasPhoto === true ? "Photo evidence available" : item.hasPhoto === false ? "No photo evidence" : "Photo availability unknown"}</span>
@@ -146,7 +147,7 @@ export default function CityReview({ onSignOut }: { onSignOut?: () => void } = {
             {(detailLoading || detailKey !== selectionKey) && <p role="status">{currentDetail ? "Refreshing evidence…" : "Loading evidence…"}</p>}
             {detailKey === selectionKey && detailError && <div className="cr-error" role="alert"><p>{detailError}</p>{currentDetail && <p>Displayed evidence may be out of date.</p>}<button className="cr-button" onClick={() => setDetailRevision(value => value + 1)}>Retry evidence</button></div>}
             {currentDetail && <>
-              <h3 className="cr-report-title">{categories[currentDetail.issueType]} {currentDetail.isDemo && <span className="cr-demo">DEMO / TEST</span>}</h3><p>{currentDetail.description}</p>
+              <h3 className="cr-report-title">{categories[currentDetail.issueType]}</h3><p>{currentDetail.description}</p>
               {evidenceUpdatedAt && <p className="cr-note">Evidence last loaded {timestamp(evidenceUpdatedAt.toISOString())}{detailStale ? " · STALE" : ""}</p>}
               <dl className="cr-facts"><div><dt>Community status</dt><dd>{statuses[currentDetail.status]}</dd></div><div><dt>Coordinates</dt><dd>{currentDetail.latitude.toFixed(5)}, {currentDetail.longitude.toFixed(5)}</dd></div><div><dt>Submissions</dt><dd>{currentDetail.observationCount} (not unique people)</dd></div><div><dt>Reported</dt><dd>{timestamp(currentDetail.createdAt)}</dd></div></dl>
               <a href={`https://www.openstreetmap.org/?mlat=${currentDetail.latitude}&mlon=${currentDetail.longitude}#map=18/${currentDetail.latitude}/${currentDetail.longitude}`} target="_blank" rel="noreferrer">Open location in map ↗</a>
@@ -154,7 +155,7 @@ export default function CityReview({ onSignOut }: { onSignOut?: () => void } = {
               {!currentDetail.observations?.length && <p>No observation evidence available.</p>}
               {currentDetail.observations?.map(observation => <article className="cr-observation" key={observation.id}>
                 <small>{timestamp(observation.createdAt)} · {observation.source}</small><p>{observation.description}</p>
-                {photoSource(observation.photoUrl) ? <figure><img src={photoSource(observation.photoUrl)} alt={currentDetail.isDemo ? "Evidence attached to a labeled demonstration report" : "Submitted drainage observation"} onError={event => { event.currentTarget.hidden = true; event.currentTarget.nextElementSibling?.removeAttribute("hidden"); }} /><figcaption hidden>Photo could not be loaded.</figcaption></figure> : <p className="cr-note">No displayable photo attached.</p>}
+                {photoSource(observation.photoUrl) ? <CityEvidencePhoto key={observation.id + photoSource(observation.photoUrl)} src={photoSource(observation.photoUrl)!} isDemo={currentDetail.isDemo} illustrative={observation.source === "demo"} /> : <p className="cr-note">No displayable photo attached.</p>}
                 {observation.assessment && <div className="cr-assessment"><strong>AI suggestion — not a verified diagnosis</strong><p>Suggested category: {categories[observation.assessment.suggestedCategory]}</p><p>{observation.assessment.visibleEvidence}</p><small>Uncertainty: {observation.assessment.uncertainty} · {observation.assessment.humanReviewRecommended ? "Human review recommended" : "Human confirmation still required"}</small></div>}
               </article>)}
               <h3>Community history</h3>

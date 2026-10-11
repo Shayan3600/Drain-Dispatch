@@ -1,5 +1,7 @@
 # Engineering lessons
 
+- When the owner says the hackathon gap review is sufficient, stop expanding scope. Finish existing fixes, verification and the authorized PR merge; record deferred operational work briefly without turning it into a release blocker.
+
 - Use short, concrete product copy: report, location, photo, history, saved. Preserve essential confirmation and privacy information; avoid vague marketing slogans when the owner asks for concise language.
 - A demonstrative employee login must say it is a demo, collect no real account credentials, and leave protected backend authorization unchanged.
 - A preview-only instruction overrides earlier production deployment authorization for that release. Preserve the live deployment, public URLs and worker while preparing the new design for review.

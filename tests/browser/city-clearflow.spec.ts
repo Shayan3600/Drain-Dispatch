@@ -61,6 +61,8 @@ test("Simplified ClearFlow workspace keeps city functionality and responsive lay
     await expect(page.getByRole("navigation",{name:"City workspace navigation"})).toBeVisible();
     await chooseCityFilter(page,"Community status","All statuses");
     await expect(page.locator(".cr-card")).toHaveCount(48);
+    await expect(page.locator(".cr-demo")).toHaveCount(0);
+    await expect(page.locator(".cr-demo-notice")).toContainText("not actual city complaints");
     await expect(page.locator(".cr-summary")).toContainText("48 loaded");
     await chooseCityFilter(page,"Concern type","Standing water");
     await page.getByLabel("Photo evidence only").check();
@@ -74,6 +76,8 @@ test("Simplified ClearFlow workspace keeps city functionality and responsive lay
     await chooseCityFilter(page,"Community status","All statuses");
     await page.locator(".cr-card").filter({hasText:"CITY DEMO 01 —"}).click();
     await expect(page.locator(".cr-observation img")).toHaveCount(1);
+    await expect(page.locator(".cr-report-title")).toHaveText("Blocked drain");
+    await expect(page.locator(".cr-demo")).toHaveCount(0);
     await expect.poll(()=>page.locator(".cr-observation img").first().evaluate(element=>(element as HTMLImageElement).naturalWidth)).toBe(800);
     await expect(page.getByRole("textbox",{name:"Report packet preview"})).toHaveValue(/DEMO \/ TEST REPORT/);
     // Resolve the supplied display family before measuring typography.

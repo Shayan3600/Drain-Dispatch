@@ -83,6 +83,7 @@ export interface Weather {
   unavailable?: boolean;
 }
 export interface Draft {
+  isDemo: boolean;
   description?: string;
   issueType?: IssueType;
   photoId?: string;

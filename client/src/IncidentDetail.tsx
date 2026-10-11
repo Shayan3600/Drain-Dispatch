@@ -22,6 +22,22 @@ const eventLabels: Record<string, string> = {
   status_changed: "Review status updated",
   report_confirmed: "Report location confirmed",
 };
+function photoSource(value: string) {
+  try {
+    const apiOrigin = (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_URL;
+    const url = new URL(value, apiOrigin || window.location.origin);
+    return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url.href : undefined;
+  } catch { return undefined; }
+}
+function EvidencePhoto({ value, className, alt }: { value: string; className?: string; alt: string }) {
+  const source = photoSource(value);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => { setFailed(false); setAttempt(0); }, [source]);
+  if (!source) return <p className="muted">Photo unavailable.</p>;
+  return failed ? <div><p role="status">Photo could not be loaded.</p><button className="button secondary compact" type="button" onClick={() => { setAttempt(current => current + 1); setFailed(false); }}>Retry photo</button></div>
+    : <a href={source} target="_blank" rel="noreferrer" aria-label="Open full-size photo"><img key={`${source}:${attempt}`} className={className} src={source} alt={alt} loading="lazy" onError={() => setFailed(true)} /></a>;
+}
 export default function IncidentDetail({
   incident,
   onClose,
@@ -34,32 +50,56 @@ export default function IncidentDetail({
   const [detail, setDetail] = useState(incident),
     [events, setEvents] = useState<IncidentEvent[]>([]),
     [loading, setLoading] = useState(true),
+    [historyLoading, setHistoryLoading] = useState(true),
+    [historyError, setHistoryError] = useState(""),
     [error, setError] = useState(""),
     [description, setDescription] = useState(""),
     [confirmed, setConfirmed] = useState(false),
     [saving, setSaving] = useState(false),
     [success, setSuccess] = useState(false);
   const request = useRef({ description: "", key: crypto.randomUUID() });
-  async function load() {
+  const evidenceController = useRef<AbortController>(undefined);
+  const historyController = useRef<AbortController>(undefined);
+  async function loadEvidence() {
+    evidenceController.current?.abort();
+    const controller = new AbortController();
+    evidenceController.current = controller;
+    const current = () => !controller.signal.aborted && evidenceController.current === controller;
     setLoading(true);
+    setError("");
     try {
-      const [d, h] = await Promise.all([
-        api<Incident>(`/incidents/${incident.id}`),
-        api<IncidentEvent[] | { events: IncidentEvent[] }>(
-          `/incidents/${incident.id}/history`,
-        ),
-      ]);
-      setDetail(d);
-      setEvents(list(h, "events"));
-      setError("");
+      const result = await api<Incident>(`/incidents/${incident.id}`, { signal: controller.signal });
+      if (current()) setDetail(result);
     } catch (e) {
-      setError((e as Error).message);
+      if (current()) setError(e instanceof Error ? e.message : "Report evidence could not be loaded.");
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
+      if (evidenceController.current === controller) evidenceController.current = undefined;
     }
   }
+  async function loadHistory() {
+    historyController.current?.abort();
+    const controller = new AbortController();
+    historyController.current = controller;
+    const current = () => !controller.signal.aborted && historyController.current === controller;
+    setHistoryLoading(true);
+    setHistoryError("");
+    try {
+      const result = await api<IncidentEvent[] | { events: IncidentEvent[] }>(`/incidents/${incident.id}/history`, { signal: controller.signal });
+      if (current()) setEvents(list(result, "events"));
+    } catch {
+      if (current()) setHistoryError(events.length ? "History could not be refreshed. Showing the last loaded history." : "History could not be loaded.");
+    } finally {
+      if (current()) setHistoryLoading(false);
+      if (historyController.current === controller) historyController.current = undefined;
+    }
+  }
+  async function load() { await Promise.allSettled([loadEvidence(), loadHistory()]); }
   useEffect(() => {
+    setDetail(incident);
+    setEvents([]);
     void load();
+    return () => { evidenceController.current?.abort(); historyController.current?.abort(); };
   }, [incident.id]);
   async function submit() {
     setSaving(true);
@@ -79,8 +119,8 @@ export default function IncidentDetail({
       setDescription("");
       setConfirmed(false);
       request.current = { description: "", key: crypto.randomUUID() };
-      await load();
       onChanged();
+      await load();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -116,7 +156,7 @@ export default function IncidentDetail({
       {error && (
         <div className="notice error" role="alert">
           {error}
-          <button className="text-link" onClick={() => void load()}>
+          <button className="text-link" onClick={() => void loadEvidence()}>
             Retry
           </button>
         </div>
@@ -124,12 +164,13 @@ export default function IncidentDetail({
       <div className="detail-columns">
         <section>
           <h4 className="section-title">Community evidence</h4>
-          {loading ? (
+          {loading && (
             <p className="loading-inline">
               <LoaderCircle size={17} className="spin" />
               Loading observations…
             </p>
-          ) : detail.observations?.length ? (
+          )}
+          {detail.observations?.length ? (
             detail.observations.map((o) => (
               <article key={o.id} className="observation">
                 <div className="observation-top">
@@ -147,14 +188,7 @@ export default function IncidentDetail({
                 </div>
                 <p>{o.description}</p>
                 {o.photoUrl && (
-                  <a href={o.photoUrl} target="_blank" rel="noreferrer">
-                    <img
-                      className="evidence-photo"
-                      src={o.photoUrl}
-                      alt="Submitted report photo"
-                      loading="lazy"
-                    />
-                  </a>
+                  <EvidencePhoto value={o.photoUrl} className="evidence-photo" alt="Submitted report photo" />
                 )}
                 {o.assessment && (
                   <p className="ai-note">
@@ -165,28 +199,19 @@ export default function IncidentDetail({
                 )}
               </article>
             ))
-          ) : (
+          ) : !loading ? (
             <p className="muted">No additional observations yet.</p>
-          )}
+          ) : null}
           {detail.photos?.length && (
             <div className="photo-grid">
               {detail.photos.map((photo) => (
-                <a
-                  key={photo.id}
-                  href={photo.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <img
-                    src={photo.url}
-                    alt="Incident photo evidence"
-                    loading="lazy"
-                  />
-                </a>
+                <EvidencePhoto key={photo.id} value={photo.url} alt="Incident photo evidence" />
               ))}
             </div>
           )}
           <h4 className="section-title history-heading">Incident history</h4>
+          {historyLoading && <p className="loading-inline" role="status"><LoaderCircle size={17} className="spin" />Loading incident history…</p>}
+          {historyError && <div className="notice error" role="alert"><span>{historyError}</span><button className="text-link" type="button" onClick={() => void loadHistory()}>Retry history</button></div>}
           <ol className="history">
             {events.map((event, index) => (
               <li key={event.id || index}>
@@ -198,7 +223,7 @@ export default function IncidentDetail({
               </li>
             ))}
           </ol>
-          {!loading && !events.length && (
+          {!historyLoading && !historyError && !events.length && (
             <p className="muted">No history available.</p>
           )}
         </section>

@@ -109,10 +109,11 @@ export class Reporting {
     latitude: number;
     longitude: number;
     issueType: string;
+    demo?: boolean;
   }) {
     const rows = await this.db.query(
-      `SELECT i.*,count(o.id)::int observation_count FROM incidents i LEFT JOIN observations o ON o.incident_id=i.id WHERE i.latitude BETWEEN $1-0.0004 AND $1+0.0004 AND i.longitude BETWEEN $2-0.0006 AND $2+0.0006 AND i.issue_type=$3 AND i.status!='closed' AND i.updated_at>now()-interval '30 days' GROUP BY i.id`,
-      [location.latitude, location.longitude, location.issueType],
+      `SELECT i.*,count(o.id)::int observation_count FROM incidents i LEFT JOIN observations o ON o.incident_id=i.id WHERE i.latitude BETWEEN $1-0.0004 AND $1+0.0004 AND i.longitude BETWEEN $2-0.0006 AND $2+0.0006 AND i.issue_type=$3 AND i.status!='closed' AND i.updated_at>now()-interval '30 days' AND i.is_demo=$4 GROUP BY i.id`,
+      [location.latitude, location.longitude, location.issueType, location.demo ?? false],
     );
     return rows.rows
       .map((r) => ({
@@ -306,6 +307,7 @@ export class Reporting {
     photoId?: string;
     sourceMessageId: string;
     token?: string;
+    isDemo?: boolean;
   }) {
     const token =
       input.token ??
@@ -318,7 +320,7 @@ export class Reporting {
     await this.db.transaction(async (c) => {
       await this.checkPhoto(c, input.photoId);
       await c.query(
-        `INSERT INTO report_drafts(id,token_hash,source,description,issue_type,photo_id,source_message_id,expires_at) VALUES($1,$2,'imessage',$3,$4,$5,$6,now()+interval '1 hour') ON CONFLICT(source_message_id) DO NOTHING`,
+        `INSERT INTO report_drafts(id,token_hash,source,description,issue_type,photo_id,source_message_id,expires_at,is_demo) VALUES($1,$2,'imessage',$3,$4,$5,$6,now()+interval '1 hour',$7) ON CONFLICT(source_message_id) DO NOTHING`,
         [
           id,
           hash(token),
@@ -326,6 +328,7 @@ export class Reporting {
           input.issueType,
           input.photoId ?? null,
           input.sourceMessageId,
+          input.isDemo ?? false,
         ],
       );
     });
@@ -334,7 +337,7 @@ export class Reporting {
   async getDraft(token: string, c: Connection = this.db) {
     const r = (
       await c.query(
-        "SELECT d.*,p.url,p.assessment FROM report_drafts d LEFT JOIN photos p ON p.id=d.photo_id WHERE d.token_hash=$1",
+        "SELECT d.*,p.url,p.assessment,COALESCE(i.is_demo,d.is_demo) effective_demo FROM report_drafts d LEFT JOIN photos p ON p.id=d.photo_id LEFT JOIN incidents i ON i.id=d.confirmed_incident_id WHERE d.token_hash=$1",
         [hash(token)],
       )
     ).rows[0];
@@ -353,6 +356,7 @@ export class Reporting {
       assessment: r.assessment ?? undefined,
       expiresAt: r.expires_at,
       confirmedIncidentId: r.confirmed_incident_id,
+      isDemo: Boolean(r.effective_demo),
     };
   }
   async confirmDraft(
@@ -390,23 +394,25 @@ export class Reporting {
             longitude: r.longitude,
           }) > 30 ||
           r.issue_type !== input.issueType ||
+          Boolean(r.is_demo) !== d.isDemo ||
           r.status === "closed"
         )
           throw new AppError(
             400,
             "INVALID_MATCH",
-            "Choose a matching active incident at the confirmed location.",
+            "Choose a matching active incident at the confirmed location with the same real or demo classification.",
           );
       } else {
         id = randomUUID();
         await c.query(
-          "INSERT INTO incidents(id,latitude,longitude,description,issue_type,is_demo) VALUES($1,$2,$3,$4,$5,false)",
+          "INSERT INTO incidents(id,latitude,longitude,description,issue_type,is_demo) VALUES($1,$2,$3,$4,$5,$6)",
           [
             id,
             input.latitude,
             input.longitude,
             input.description,
             input.issueType,
+            d.isDemo,
           ],
         );
       }

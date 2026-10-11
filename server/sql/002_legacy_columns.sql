@@ -12,5 +12,6 @@ ALTER TABLE incidents DROP CONSTRAINT IF EXISTS incidents_status_check;
 ALTER TABLE incidents ADD CONSTRAINT incidents_status_check CHECK(status IN ('pending','pending_review','under_review','closed'));
 ALTER TABLE incidents ALTER COLUMN status SET DEFAULT 'pending_review';
 ALTER TABLE incidents ALTER COLUMN is_demo SET DEFAULT false;
+ALTER TABLE report_drafts ADD COLUMN IF NOT EXISTS is_demo boolean NOT NULL DEFAULT false;
 ALTER TABLE observations DROP CONSTRAINT IF EXISTS observations_source_check;
 ALTER TABLE observations ADD CONSTRAINT observations_source_check CHECK(source IN ('web','imessage','demo'));

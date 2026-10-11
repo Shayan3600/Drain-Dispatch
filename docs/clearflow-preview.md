@@ -43,3 +43,13 @@ The separate loopback preview uses a fresh local PostgreSQL database with 48 lab
 GitHub push and PR CI pass on combined source commit `f804b89`, including history/source scanning, clean installation, typecheck, backend tests, production build, Docker runtime and Linux browser tests. [PR check run](https://github.com/Shayan3600/Drain-Dispatch/actions/runs/38120089517). The team Notion plan records the preview workflow and preserves previous assignments and production evidence.
 
 To review from a fresh checkout: build, run `node --import tsx scripts/city-showcase.ts`, open its printed loopback origin, and use Employee login. Community demo counts require **Include labeled demo reports**; employee review includes labeled DEMO records automatically. The launcher owns a separate process and database; stop only that process when finished. No public tunnel is created for this preview.
+
+## Updated employee PR and recovery acceptance
+
+The six additional commits in PR #5 through `a4db174` are incorporated with original ancestry. Ten supplied reference photographs retain original bytes, aspect ratios, watermarks and provenance. `--reference-photos` creates a separate local dataset; it does not modify existing demo or hosted records. Full-size links, photo retry and accurate submitted-versus-reference captions are verified.
+
+The combined source passes 57 backend tests and all 36 browser tests in Windows Brave, plus TypeScript checks, production builds and a zero-vulnerability dependency audit. New coverage proves private-conversation reporting, bounded attachment downloads, real/demo matching isolation, preserved legacy photo drafts, transient draft retry without lost edits, independent history loading and map availability during an analytics outage. React StrictMode required a persistent simulated outage in the retry test; production code was not changed to accommodate the fixture.
+
+A fresh photo preview has 48 synthetic reports, 152 observations, 48 photo associations and 200 history events. Desktop and mobile evidence loads without horizontal overflow or writes; five private-file paths and three protected routes are denied, invalid input is rejected and record counts remain unchanged. The old preview listener is stopped; its database is retained. The photo manifest is `.data/city-showcase-photos-active.json`.
+
+The owner authorized the GitHub merge after safe checks and ended further hackathon gap expansion. Both Railway services remain pinned to `0243c778` on `development/live-integrations`; the GitHub merge does not promote this preview or change production settings. See PR #6 for the current merge and CI result, and [project gaps](project-gaps.md) for concise deferred operating limits.

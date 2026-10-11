@@ -136,6 +136,7 @@ test("simulated message draft confirms in the browser and replay does not duplic
       data: {
         id: "browser-message-event",
         senderId: "private-test-sender",
+        chatId: "synthetic-private-browser-chat",
         text: "REPORT Browser messaging test: water visibly pools beside a walkway.",
       },
     },
@@ -173,6 +174,7 @@ test("simulated message draft confirms in the browser and replay does not duplic
       data: {
         id: "browser-message-event",
         senderId: "private-test-sender",
+        chatId: "synthetic-private-browser-chat",
         text: "REPORT Browser messaging test: water visibly pools beside a walkway.",
       },
     },

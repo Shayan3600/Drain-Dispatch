@@ -1,5 +1,19 @@
 # DrainDispatch implementation plan
 
+## Latest PR integration and project gaps
+
+- [x] Review the updated PR #5 head and delta against the previously integrated signed head; preserve preview work and original teammate ancestry.
+- [x] Integrate the new behavior with the existing Clearflow UI, employee demo access and concise copy.
+- [x] Audit user workflows and operations for concrete missing behavior; fix actionable gaps and document genuine remaining limitations.
+- [x] Verify meaningful backend/browser flows and builds, then scan exact staged source, public build and outgoing history before safe publication.
+- [x] Refresh the isolated photo preview and prepare the verified source and team handoff for PR #6; keep production pinned.
+
+Plan checkpoint: inspect updated PR #5 (a4db174), since PR #6 still contains its earlier 5e30939 head. Integrate into development/clearflow-preview, preserve credentials/data and existing employee demo boundaries, and evaluate gaps against actual code/tests rather than adding speculative features.
+
+Scope checkpoint: the owner ended additional gap exploration and authorized merging the PR if safe. Finish the current regression checks and secret scans, update PR #6, and merge the combined release after CI. Railway's two services remain pinned to `0243c778` on `development/live-integrations`; merging main does not change their configured source or promote the preview.
+
+Review: 57 backend tests and all 36 Brave browser tests pass; typecheck, production builds and dependency audit pass (zero vulnerabilities). Desktop/mobile reference-photo review fits without overflow or writes. A new isolated preview preserves all older data; protected routes/private paths and invalid input are checked. Exact source/public-build/history scans are required before the remote update. GitHub PR #6 records the final CI and merge outcome; production remains pinned. No further gap exploration is required for this hackathon milestone.
+
 ## Clearflow design merge — preview release
 
 - [x] Review new PR #5 and preserve its original history while integrating the employee workspace into the preview.

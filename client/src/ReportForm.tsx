@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Modal from "./Modal";
 import DrainMap from "./DrainMap";
-import { api, list, post } from "./api";
+import { ApiError, api, list, post } from "./api";
 import {
   categories,
   type Assessment,
@@ -47,37 +47,58 @@ export default function ReportForm({
     [result, setResult] = useState<Incident>();
   const [draftLoading, setDraftLoading] = useState(Boolean(draftToken)),
     [draftInvalid, setDraftInvalid] = useState(false),
+    [draftError, setDraftError] = useState(""),
+    [draftTerminal, setDraftTerminal] = useState(false),
+    [draftRetry, setDraftRetry] = useState(0),
+    [draftIsDemo, setDraftIsDemo] = useState(false),
     [alreadySaved, setAlreadySaved] = useState(false);
   const [nearbyState, setNearbyState] = useState<
       "idle" | "loading" | "ready" | "error"
     >("idle"),
     [nearbyRetry, setNearbyRetry] = useState(0);
   const idempotency = useRef({ key: crypto.randomUUID(), payload: "" });
+  const edited = useRef({ description: false, issueType: false, photo: false, assessment: false });
   useEffect(() => {
     if (!draftToken) return;
-    api<Draft>(`/report-drafts/${encodeURIComponent(draftToken)}`)
+    const controller = new AbortController();
+    const current = () => !controller.signal.aborted;
+    setDraftLoading(true);
+    setDraftError("");
+    setDraftTerminal(false);
+    api<Draft>(`/report-drafts/${encodeURIComponent(draftToken)}`, { signal: controller.signal })
       .then(async (d) => {
+        if (!current()) return;
+        setDraftIsDemo(d.isDemo === true);
         if (d.confirmedIncidentId) {
-          const saved = await api<Incident>(`/incidents/${d.confirmedIncidentId}`);
+          const saved = await api<Incident>(`/incidents/${d.confirmedIncidentId}`, { signal: controller.signal });
+          if (!current()) return;
+          setDraftInvalid(false);
           setAlreadySaved(true);
           setResult(saved);
           onCreated(saved);
           return;
         }
-        setDescription(d.description || "");
-        setIssueType(
+        if (!edited.current.description) setDescription(d.description || "");
+        if (!edited.current.issueType) setIssueType(
           d.issueType || d.assessment?.suggestedCategory || "blocked_drain",
         );
-        setPhotoId(d.photoId ?? undefined);
-        setPhotoUrl(d.photoUrl ?? undefined);
-        setAssessment(d.assessment ?? undefined);
+        if (!edited.current.photo) {
+          setPhotoId(d.photoId ?? undefined);
+          setPhotoUrl(d.photoUrl ?? undefined);
+        }
+        if (!edited.current.assessment) setAssessment(d.assessment ?? undefined);
+        setDraftInvalid(false);
       })
       .catch((e) => {
-        setError(e.message);
+        if (!current()) return;
+        const terminal = e instanceof ApiError && [404, 410].includes(e.status);
+        setDraftTerminal(terminal);
+        setDraftError(terminal ? "This report link is expired or unavailable." : "Your draft could not be loaded. Please try again.");
         setDraftInvalid(true);
       })
-      .finally(() => setDraftLoading(false));
-  }, [draftToken, onCreated]);
+      .finally(() => { if (current()) setDraftLoading(false); });
+    return () => controller.abort();
+  }, [draftToken, onCreated, draftRetry]);
   useEffect(() => {
     setConfirmed(false);
     setMatch(undefined);
@@ -88,10 +109,12 @@ export default function ReportForm({
       return;
     }
     let active = true;
+    const controller = new AbortController();
     setNearbyState("loading");
     const timer = setTimeout(() => {
       api<Incident[] | { incidents: Incident[] }>(
-        `/incidents/nearby?latitude=${position[0]}&longitude=${position[1]}&issueType=${issueType}`,
+        `/incidents/nearby?latitude=${position[0]}&longitude=${position[1]}&issueType=${issueType}&demo=${draftIsDemo}`,
+        { signal: controller.signal },
       )
         .then((d) => {
           if (active) {
@@ -109,8 +132,9 @@ export default function ReportForm({
     return () => {
       active = false;
       clearTimeout(timer);
+      controller.abort();
     };
-  }, [position, issueType, nearbyRetry]);
+  }, [position, issueType, nearbyRetry, draftIsDemo]);
   async function upload(file?: File) {
     if (!file) return;
     setError("");
@@ -134,6 +158,8 @@ export default function ReportForm({
       setPhotoId(photo.id);
       setPhotoUrl(photo.url);
       setAssessment(undefined);
+      edited.current.photo = true;
+      edited.current.assessment = true;
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -145,6 +171,9 @@ export default function ReportForm({
     setError("");
     try {
       const a = await post<Assessment>("/analyze", { photoId });
+      edited.current.assessment = true;
+      edited.current.issueType = true;
+      edited.current.description = true;
       setAssessment(a);
       setIssueType(a.suggestedCategory);
       if (a.visibleEvidence) setDescription(a.visibleEvidence);
@@ -303,6 +332,12 @@ export default function ReportForm({
               {error}
             </div>
           )}
+          {draftError && (
+            <div className="notice error" role="alert">
+              <span>{draftError}{draftTerminal && " Send RESUME in your iMessage conversation for a fresh link."}</span>
+              {!draftTerminal && !draftLoading && <button className="text-link" type="button" onClick={() => setDraftRetry(current => current + 1)}>Retry loading</button>}
+            </div>
+          )}
           {draftLoading ? (
             <div className="loading-inline">
               <LoaderCircle className="spin" />
@@ -322,7 +357,7 @@ export default function ReportForm({
                       placeholder="For example: leaves are covering the drain grate near the sidewalk."
                       value={description}
                       maxLength={2000}
-                      onChange={(e) => setDescription(e.target.value)}
+                      onChange={(e) => { edited.current.description = true; setDescription(e.target.value); }}
                     />
                     <small className="muted">
                       Describe visible evidence. Avoid names, phone numbers,
@@ -334,9 +369,7 @@ export default function ReportForm({
                     <select
                       id="issueType"
                       value={issueType}
-                      onChange={(e) =>
-                        setIssueType(e.target.value as IssueType)
-                      }
+                      onChange={(e) => { edited.current.issueType = true; setIssueType(e.target.value as IssueType); }}
                     >
                       {Object.entries(categories).map(([key, label]) => (
                         <option value={key} key={key}>

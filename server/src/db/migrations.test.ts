@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { openDatabase, type Database } from "./database.js";
 import { Reporting } from "../services/reporting.js";
@@ -53,5 +54,38 @@ test("legacy upgrade preserves evidence, source IDs, status and event IDs across
     await db?.close();
     if (!legacyClosed) await legacy.close();
     await rm(directory,{recursive:true,force:true});
+  }
+});
+
+test("legacy pending DEMO drafts preserve photo evidence and later starts retain explicit classifications", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "clearflow-draft-upgrade-"));
+  const legacy = new PGlite(directory);
+  let legacyClosed = false;
+  let db: Database | undefined;
+  const token = "synthetic-legacy-draft-regression-placeholder";
+  const draftId = randomUUID(), photoId = randomUUID();
+  try {
+    await legacy.exec(await readFile(new URL("../../sql/001_init.sql", import.meta.url), "utf8"));
+    await legacy.query("ALTER TABLE report_drafts DROP COLUMN is_demo");
+    await legacy.query("INSERT INTO photos(id,url,storage_key,mime_type) VALUES($1,'https://images.example/preserved-draft.jpg','synthetic-preserved-photo','image/jpeg')", [photoId]);
+    await legacy.query("INSERT INTO report_drafts(id,token_hash,source,description,issue_type,photo_id,source_message_id,expires_at) VALUES($1,$2,'imessage','DEMO: Existing pending test photo','blocked_drain',$3,'legacy-demo-draft',now()+interval '1 hour')", [draftId, createHash("sha256").update(token).digest("hex"), photoId]);
+    await legacy.query("INSERT INTO report_drafts(id,token_hash,source,description,issue_type,source_message_id,expires_at) VALUES($1,$2,'imessage','DEMOGRAPHIC description is not a demo marker','other','legacy-real-draft',now()+interval '1 hour')", [randomUUID(), randomUUID()]);
+    await legacy.close(); legacyClosed = true;
+    db = await openDatabase(directory);
+    const reporting = new Reporting(db);
+    const preserved = await reporting.getDraft(token);
+    assert.equal(preserved.isDemo, true);
+    assert.equal(preserved.photoId, photoId);
+    assert.equal(preserved.photoUrl, "https://images.example/preserved-draft.jpg");
+    assert.equal((await db.query("SELECT is_demo FROM report_drafts WHERE source_message_id='legacy-real-draft'")).rows[0].is_demo, false);
+    const explicitReal = await reporting.draft({ description: "DEMO: Prose with an explicit real classification", issueType: "other", sourceMessageId: "explicit-real-after-upgrade", isDemo: false });
+    await db.close(); db = undefined;
+    db = await openDatabase(directory);
+    assert.equal((await new Reporting(db).getDraft(explicitReal.token)).isDemo, false, "reopening must not reinterpret stored text");
+    assert.equal((await new Reporting(db).getDraft(token)).isDemo, true);
+    assert.equal((await new Reporting(db).getDraft(token)).photoId, photoId);
+  } finally {
+    await db?.close(); if (!legacyClosed) await legacy.close();
+    await rm(directory, { recursive: true, force: true });
   }
 });

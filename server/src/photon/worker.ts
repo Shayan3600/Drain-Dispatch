@@ -12,6 +12,7 @@ import type { IncomingMessage, MessageReply } from "./handler.js";
 import type { Followup } from "./notifications.js";
 
 const MAX_BYTES = 8 * 1024 * 1024;
+const ATTACHMENT_TIMEOUT_MS = 15_000;
 const acceptedImages = new Set(["image/jpeg", "image/png", "image/webp"]);
 class ApiRequestError extends Error {}
 class IncomingContentError extends Error {}
@@ -47,16 +48,29 @@ function parts(content: Content): { text: string[]; photos: Attachment[] } {
 }
 
 /** Read a provider-owned attachment stream with a hard byte cap, never a user URL. */
-async function boundedPhoto(attachment: Attachment): Promise<Buffer> {
+async function boundedPhoto(attachment: Attachment, timeoutMs: number): Promise<Buffer> {
   if (attachment.size !== undefined && attachment.size > MAX_BYTES)
     throw new IncomingContentError("Photographs must be 8 MB or smaller.");
-  const stream = await attachment.stream();
-  const reader = stream.getReader();
+  let expired = false;
+  let timer: ReturnType<typeof setTimeout>;
+  let reader: ReadableStreamDefaultReader<unknown> | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      expired = true;
+      reject(new IncomingContentError("The photograph download took too long. Please send one JPEG, PNG, or WebP photo again."));
+    }, timeoutMs);
+  });
   const chunks: Buffer[] = [];
   let total = 0;
   try {
+    const opening = attachment.stream();
+    // A stream arriving after the total deadline must be cancelled too.
+    void opening.then(stream => { if (expired) void stream.cancel().catch(() => undefined); }).catch(() => undefined);
+    const stream = await Promise.race([opening, deadline]);
+    const activeReader = stream.getReader();
+    reader = activeReader;
     while (true) {
-      const part = await reader.read();
+      const part = await Promise.race([activeReader.read(), deadline]);
       if (part.done) break;
       if (!(part.value instanceof Uint8Array))
         throw new IncomingContentError(
@@ -68,14 +82,16 @@ async function boundedPhoto(attachment: Attachment): Promise<Buffer> {
       chunks.push(Buffer.from(part.value));
     }
   } finally {
-    await reader.cancel().catch(() => undefined);
-    reader.releaseLock();
+    clearTimeout(timer!);
+    // Cancellation is initiated without awaiting provider cleanup, which may itself stall.
+    if (reader) { void reader.cancel().catch(() => undefined); reader.releaseLock(); }
   }
   return Buffer.concat(chunks, total);
 }
 
 export async function normalizeProviderMessage(
   message: Message,
+  options: { attachmentTimeoutMs?: number } = {},
 ): Promise<IncomingMessage | undefined> {
   if (
     message.direction !== "inbound" ||
@@ -83,6 +99,9 @@ export async function normalizeProviderMessage(
     !message.sender?.id
   )
     return undefined;
+  const space = message.space as Message["space"] & { type?: string };
+  if (space?.type !== "dm")
+    throw new IncomingContentError("Please send your report in a private conversation with Clearflow. Group conversations cannot receive private confirmation links.");
   const content = parts(message.content);
   if (!content.text.length && !content.photos.length) return undefined;
   if (content.photos.length > 1)
@@ -92,14 +111,13 @@ export async function normalizeProviderMessage(
   const text = content.text.join("\n");
   if (text.length > 2000)
     throw new IncomingContentError("Please keep your description under 2,000 characters.");
-  const space = message.space as Message["space"] & { type?: string };
   return {
     id: message.id,
     senderId: message.sender.id,
     text,
     ...(space?.type === "dm" ? { chatId: space.id } : {}),
     ...(content.photos[0]
-      ? { photo: await boundedPhoto(content.photos[0]) }
+      ? { photo: await boundedPhoto(content.photos[0], options.attachmentTimeoutMs ?? ATTACHMENT_TIMEOUT_MS) }
       : {}),
   };
 }

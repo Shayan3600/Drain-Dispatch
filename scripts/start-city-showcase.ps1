@@ -1,3 +1,5 @@
+param([switch]$ReferencePhotos)
+
 $ErrorActionPreference = 'Stop'
 $cityProject = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $cityNode = (Get-Command node.exe -ErrorAction Stop).Source
@@ -7,11 +9,14 @@ $cityStamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $cityPreviousEnvironment = [Environment]::GetEnvironmentVariable('NODE_ENV','Process')
 [Environment]::SetEnvironmentVariable('NODE_ENV','development','Process')
 try {
-    $cityProcess = Start-Process -FilePath $cityNode -ArgumentList @('--import','tsx','scripts/city-showcase.ts') -WorkingDirectory $cityProject -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $cityLogs "showcase-$cityStamp.log") -RedirectStandardError (Join-Path $cityLogs "showcase-$cityStamp.error.log")
+    $cityArguments = @('--import','tsx','scripts/city-showcase.ts')
+    if ($ReferencePhotos) { $cityArguments += '--reference-photos' }
+    $cityProcess = Start-Process -FilePath $cityNode -ArgumentList $cityArguments -WorkingDirectory $cityProject -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $cityLogs "showcase-$cityStamp.log") -RedirectStandardError (Join-Path $cityLogs "showcase-$cityStamp.error.log")
 } finally {
     [Environment]::SetEnvironmentVariable('NODE_ENV',$cityPreviousEnvironment,'Process')
 }
-$cityManifest = Join-Path $cityProject '.data/city-showcase-active.json'
+$cityManifestName = if ($ReferencePhotos) { '.data/city-showcase-photos-active.json' } else { '.data/city-showcase-active.json' }
+$cityManifest = Join-Path $cityProject $cityManifestName
 $cityReady = $false
 for ($cityAttempt=0; $cityAttempt -lt 25; $cityAttempt++) {
     if ($cityProcess.HasExited) { break }
@@ -29,11 +34,11 @@ for ($cityAttempt=0; $cityAttempt -lt 25; $cityAttempt++) {
 }
 if (-not $cityReady) {
     if (-not $cityProcess.HasExited) { Stop-Process -Id $cityProcess.Id -ErrorAction SilentlyContinue }
-    Get-Content -LiteralPath (Join-Path $cityLogs "showcase-$cityStamp.error.log") -ErrorAction SilentlyContinue
-    throw "Demo server did not pass its local health check. See $cityLogs."
+    throw "Demo server did not pass its local health check. Diagnostic logs remain private in $cityLogs; do not share their raw contents."
 }
 Write-Host "City showcase: $($cityInfo.url)"
-Write-Host '48 DEMO reports; 152 submissions; 48 synthetic image illustrations; 200 history events.'
+Write-Host '48 synthetic reports; 152 submissions; 48 image associations; 200 history events.'
+if ($ReferencePhotos) { Write-Host 'All 10 supplied reference photos are included. Their locations/dates are not verified.' }
 Write-Host 'Saved reports load automatically. Choose Community status > All statuses to see all 48.'
 Write-Host "Stop only this demo server with: Stop-Process -Id $($cityProcess.Id)"
 Start-Process $cityInfo.url

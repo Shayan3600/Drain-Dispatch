@@ -178,9 +178,10 @@ export function createApp(db: Database) {
         latitude: z.coerce.number().min(-90).max(90),
         longitude: z.coerce.number().min(-180).max(180),
         issueType,
+        demo: z.enum(["true", "false"]).optional(),
       })
       .parse(req.query);
-    res.json(await reporting.nearby(q));
+    res.json(await reporting.nearby({ ...q, demo: q.demo === "true" }));
   });
   app.get("/api/incidents/:id", async (req, res) =>
     res.json(await reporting.detail(z.uuid().parse(req.params.id))),

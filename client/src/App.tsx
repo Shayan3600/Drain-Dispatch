@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUpRight,
   CheckCheck,
@@ -56,28 +56,44 @@ export default function App() {
     [],
   );
   const [activeDraft, setActiveDraft] = useState(draftToken);
+  const refreshController = useRef<AbortController>(undefined);
   const refresh = useCallback(async (silent = false) => {
+    if (silent && refreshController.current) return;
+    refreshController.current?.abort();
+    const controller = new AbortController();
+    refreshController.current = controller;
+    const current = () => !controller.signal.aborted && refreshController.current === controller;
     if (!silent) setLoading(true);
-    void api<Weather>("/weather")
-      .then(setWeather)
-      .catch(() => setWeather(undefined));
-    const results = await Promise.allSettled([
-      api<Incident[] | { incidents: Incident[] }>("/incidents"),
-      api<Stats>("/stats"),
-    ]);
-    if (results[0].status === "fulfilled") {
-      setIncidents(list(results[0].value, "incidents"));
-      setError("");
-      setUpdated(new Date());
-    } else setError(results[0].reason.message);
-    if (results[1].status === "fulfilled") setStats(results[1].value);
-    else setStats(undefined);
-    setLoading(false);
+    const readOptions = { signal: controller.signal };
+    const incidentRead = api<Incident[] | { incidents: Incident[] }>("/incidents", readOptions)
+      .then(result => {
+        if (!current()) return;
+        setIncidents(list(result, "incidents"));
+        setError("");
+        setUpdated(new Date());
+      })
+      .catch(reason => { if (current()) setError(reason instanceof Error ? reason.message : "Reports could not be loaded."); })
+      .finally(() => { if (current()) setLoading(false); });
+    const statsRead = api<Stats>("/stats", readOptions)
+      .then(result => { if (current()) setStats(result); })
+      .catch(() => { if (current()) setStats(undefined); });
+    const weatherRead = api<Weather>("/weather", readOptions)
+      .then(result => { if (current()) setWeather(result); })
+      .catch(() => { if (current()) setWeather(undefined); });
+    await Promise.allSettled([incidentRead, statsRead, weatherRead]);
+    if (refreshController.current === controller) refreshController.current = undefined;
   }, []);
   useEffect(() => {
     void refresh();
-    const interval = setInterval(() => void refresh(true), 30000);
-    return () => clearInterval(interval);
+    const poll = () => { if (!document.hidden) void refresh(true); };
+    const interval = setInterval(poll, 30000);
+    document.addEventListener("visibilitychange", poll);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", poll);
+      refreshController.current?.abort();
+      refreshController.current = undefined;
+    };
   }, [refresh]);
   const filtered = useMemo(
     () =>

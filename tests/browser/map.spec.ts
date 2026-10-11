@@ -12,7 +12,8 @@ test("blocked tiles expose recovery while report markers and map controls remain
   await page.locator(".cr-card").first().click();
   await page.getByRole("button", { name: "Focus selected report", exact: true }).click();
   await expect(page.locator(".cr-map .map-pin.chosen")).toHaveCount(1);
-  await expect(page.locator(".cr-evidence h3").first()).toContainText("DEMO / TEST");
+  await expect(page.locator(".cr-demo-notice")).toContainText("not actual city complaints");
+  await expect(page.getByRole("textbox", {name:"Report packet preview"})).toHaveValue(/DEMO \/ TEST REPORT/);
   blocked = false;
   await page.getByRole("button", { name: "Retry map background", exact: true }).click();
   await expect(page.getByText("Map background unavailable", { exact: true })).toHaveCount(0);

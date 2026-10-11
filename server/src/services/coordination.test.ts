@@ -25,10 +25,10 @@ test("two synthetic senders coordinate through explicit matching without exposin
     assert.equal((await reporting.list()).length,0,"a message draft alone does not publish an incident");
     const firstSource = "photon-" + key("message:" + firstMessage.id);
     const fixture = await reporting.create({latitude:0,longitude:0,description:"DEMO: Synthetic fixture observation A",issueType:"blocked_drain",locationConfirmed:true,idempotencyKey:randomUUID()},"imessage",firstSource,true);
-    const nearby = await reporting.nearby({latitude:0.0001,longitude:0.0001,issueType:"blocked_drain"});
+    const nearby = await reporting.nearby({latitude:0.0001,longitude:0.0001,issueType:"blocked_drain",demo:true});
     assert.equal(nearby[0]?.id,fixture.id);
     assert.ok(nearby[0]!.distanceMeters > 0 && nearby[0]!.distanceMeters <= 30);
-    const unconfirmed = await processIncoming({id:randomUUID(),senderId:"synthetic-sender-B",text:`OBSERVE ${fixture.id} DEMO: Unconfirmed fixture observation`},reporting,options);
+    const unconfirmed = await processIncoming({id:randomUUID(),senderId:"synthetic-sender-B",chatId:"synthetic-chat-B",text:`OBSERVE ${fixture.id} DEMO: Unconfirmed fixture observation`},reporting,options);
     assert.match(unconfirmed.responseText,/No observation has been posted yet/);
     assert.equal((await reporting.detail(fixture.id)).observationCount,1);
     assert.equal(observationSchema.safeParse({description:"Synthetic observation",idempotencyKey:randomUUID(),sameLocationConfirmed:false}).success,false);

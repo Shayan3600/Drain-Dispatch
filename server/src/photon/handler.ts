@@ -66,6 +66,8 @@ export async function processIncoming(
   options: HandlerOptions = {},
 ): Promise<MessageReply> {
   inputSchema.parse(input);
+  if (!input.chatId)
+    return { responseText: "Please send your report in a private conversation with Clearflow. Group conversations cannot receive private confirmation links." };
   const secret = options.secret ?? process.env.WORKER_TOKEN;
   if (!secret || secret.length < 24)
     throw new AppError(
@@ -193,6 +195,8 @@ async function command(
       return response;
     });
   }
+  if (!input.chatId)
+    return "Please send your report in a private conversation with Clearflow. Group conversations cannot receive private confirmation links.";
   if (!input.photo && /^(CONSENT|STOP)$/.test(upper)) {
     const consent = upper === "CONSENT";
     const senderHash = keyed(options.secret, `sender:${input.senderId}`);
@@ -304,6 +308,7 @@ async function command(
     photoId,
     sourceMessageId: `photon-${key}`,
     token,
+    isDemo: /^REPORT\s+DEMO(?:\s|:|$)/i.test(text),
   });
   const base = new URL(
     options.appUrl ?? process.env.PUBLIC_APP_URL ?? "http://localhost:5173",
