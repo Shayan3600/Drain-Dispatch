@@ -26,7 +26,7 @@ function publicPhotoLink(value: string | undefined, base?: string) {
 // Descriptions are submitted text: users should check them for personal details.
 export function formatReportPacket(incident: Incident, history: IncidentEvent[] = [], options: PacketOptions = {}): string {
   const lines = [
-    "DrainDispatch — community evidence packet",
+    "ClearFlow — community evidence packet",
     ...(options.evidenceStale ? ["STALE SNAPSHOT — a refresh failed; verify current evidence before using this packet."] : []),
     ...(incident.isDemo ? ["DEMO / TEST REPORT — excluded from real community metrics"] : []),
     `Reference: ${incident.id}`,
