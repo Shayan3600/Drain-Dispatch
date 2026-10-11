@@ -1,5 +1,24 @@
 # DrainDispatch implementation plan
 
+## Team handoff and verified publication
+
+- [x] Verify the owner finished reviewing both saved reports and map markers; close the temporary tunnel and Photon worker, restoring local-only settings.
+- [x] Publish safe source on development/live-integrations with PR #1; verify push and pull-request CI.
+- [x] Update the existing team Notion plan with verified milestones, current workflow, setup/security guidance and clearly pending GIS/deployment/demo work.
+- [x] Read back the Notion changes and verify existing team planning content is preserved.
+- [ ] Publish final safe verification documentation after repeat secret scans.
+
+Plan checkpoint: update the supplied Notion page in place, retaining team assignments and research. Distinguish verified real services from simulated duplicate contributors and planned public GIS. Never transfer credential files, private confirmation links or private user evidence to Notion.
+
+## Production readiness and release
+
+- [x] Inspect available production host configuration and authentication without exposing values; Railway is available but not connected.
+- [ ] Re-run meaningful release checks; verify production safety, migrations, public data labeling and persistent worker deployment requirements.
+- [ ] Deploy to the authorized production target when available, using dedicated secret configuration and safe source only.
+- [ ] Verify deployed health, report/photo persistence, dashboard and worker operation; record actual release status in the team handoff.
+
+Release checkpoint: the owner authorized production deployment when ready. A durable host and its authenticated account are required; an expired temporary tunnel is not production. Preserve database records, avoid destructive migrations and do not transfer private files.
+
 ## Next milestones after real iPhone text test
 
 - [x] Independently verify the owner's Photon report in Tiger Data and dashboard; capture safe evidence.
@@ -7,8 +26,8 @@
 - [x] Verify two-contributor duplicate coordination, observation counts and history with real database records (synthetic contributors; real Tiger Data).
 - [x] Polish mobile map/details/statistics and Aero styling while preserving reporting functionality.
 - [x] Verify useful time-series/environmental dashboard and weather context.
-- [ ] Update demo/submission evidence, comprehensive checks, secret scans, safe development branch and PR.
-- [ ] Close the temporary session after live testing; preserve all private configuration and existing work.
+- [x] Update demo/submission evidence, comprehensive checks, secret scans, safe development branch and PR.
+- [x] Close the temporary session after live testing; preserve all private configuration and existing work.
 
 Plan checkpoint: first real receive/reply was confirmed by the worker and owner; independently inspect persistence before claiming the full result. The photo milestone takes priority. Any new public session uses the same approved single production-app scope, verified public dataset, protected endpoints and temporary lifetime.
 
@@ -17,8 +36,8 @@ Plan checkpoint: first real receive/reply was confirmed by the worker and owner;
 - [x] Diagnose Cloudflare error: tunnel was closed before owner dashboard inspection; application and confirmed data remain healthy.
 - [x] Reopen the approved single-app HTTPS session, preserve credentials/data, update public base URL, and externally verify protections.
 - [x] Add sender-scoped RESUME to recover an existing photo draft without reuploading or exposing tokens; verify isolation, expiration and retry behavior.
-- [ ] Let the owner inspect the persisted dashboard/photo/location; keep the temporary session open until owner finishes or the announced safety deadline.
-- [ ] Complete final checks, secret scan, development branch publication and PR; update review evidence accurately.
+- [x] Let the owner inspect the persisted dashboard/photo/location; keep the temporary session open until owner finishes or the announced safety deadline.
+- [x] Complete final checks, secret scan, development branch publication and PR; update review evidence accurately.
 
 Re-plan checkpoint: stop assuming service verification ends the human session. Existing incident, photograph, assessment and confirmation are preserved. No data reset, deletion or repeated upload is needed.
 
@@ -34,8 +53,8 @@ Dashboard correction checkpoint: public mobile verification returns two active d
 - [x] Validate real Spectrum authentication, line availability and inbound reporting worker.
 - [x] Verify iMessage draft -> browser confirmation -> Tiger Data incident -> map.
 - [x] Resolve configuration/build/test issues, run automated secret scans of source and history.
-- [ ] Publish safe source to the configured repository; verify CI and document precise live-service results.
-- [ ] Continue deployment/demo preparation and record genuine external blockers.
+- [x] Publish safe source to the configured repository; verify CI and document precise live-service results.
+- [x] Continue deployment/demo preparation and record genuine external blockers.
 
 Plan checkpoint: preserve all planned features and credential values; no environment file is included in Git or transferred externally. Service authentication uses credentials only through the corresponding service SDK. Root owns security/publication and frontend verification; focused agents own Tiger Data configuration, Gemini/Cloudinary and Spectrum verification.
 
@@ -110,7 +129,7 @@ Credential activation review, October 10, 2026:
 - Owner approved a temporary HTTPS testing tunnel after local preflight: no public records existed; private credential/source paths are blocked; worker/moderator/outbox routes require authentication; inputs are validated and rate limited. Only the production app is exposed; tunnel closes after the test session. This is not durable hosting.
 - Gitleaks history/source scans and the known-credential scan of working/staged source, history and public build report zero findings. Credential files remain local, ignored in Git and Docker context.
 
-Remaining launch checks: owner inspection of the restored testing session, durable hosting/account configuration, production worker operation, .tech domain, recorded live backup and rehearsal. Sponsor-service verification evidence is documented; official current prize-track eligibility still requires confirmation. All originally requested features remain in scope.
+Remaining launch checks: durable hosting/account configuration, production worker operation, .tech domain, recorded live backup and rehearsal. Owner inspection is complete and temporary public testing is closed. Sponsor-service verification evidence is documented; official current prize-track eligibility still requires confirmation. All originally requested features remain in scope.
 
 Known limits: single Photon line; at-least-once outbound notifications; STOP cannot recall an in-flight message; weather coverage is Chapel Hill center; repeated coordinates are approximate clusters; no municipal filing or verified municipal partnership. Moderation evidence is supplied by an authorized moderator, not independently verified city action. Full accessibility compliance and multi-line messaging require further review.
 
@@ -125,4 +144,6 @@ Additional feature implemented and tested: consent-driven status notifications v
 - Two simulated contributors were verified against real Tiger Data without changing real totals or actual reports. Mobile evidence/help/form layouts were visually checked at 390 × 844.
 - The first tunnel/worker closed after the text test. The fresh photo tunnel exposes only the protected production app and automatically expires after 30 minutes; close it as soon as this session finishes.
 
-Final extension checks: 43 backend tests and seven browser flows pass; typecheck and production builds pass; dependency audit reports zero vulnerabilities. Actual Tiger Data UTC activity queries and live NWS availability/coverage/timestamps pass. Legacy is_demo=true default was corrected without changing existing incident rows. Actual secure RESUME delivery and external restored-page checks pass, preserving saved evidence and confirmed records. The saved-report return path now enables demo visibility, clears hiding filters and focuses its marker without another POST; separate demo-preview counts explain zero real metrics. The owner is reviewing this final fix.
+Final extension checks: 43 backend tests and seven browser flows pass; typecheck and production builds pass; dependency audit reports zero vulnerabilities. Actual Tiger Data UTC activity queries and live NWS availability/coverage/timestamps pass. Legacy is_demo=true default was corrected without changing existing incident rows. Actual secure RESUME delivery and external restored-page checks pass, preserving saved evidence and confirmed records. The saved-report return path now enables demo visibility, clears hiding filters and focuses its marker without another POST; separate demo-preview counts explain zero real metrics. The owner confirmed this fix and both map records. The temporary tunnel and worker are stopped and original local URL settings restored.
+
+Production review: role-specific startup validation rejects incomplete sponsor/public URL configuration before database/provider calls; protected-route secrets must be independent. A worker-specific Railway config omits the API's HTTP health check and uses compiled JavaScript. The suite now has 49 passing backend tests. Docker build/runtime checks are added to CI because no local Docker CLI is available. A Railway connection is requested; no durable deployment is claimed.

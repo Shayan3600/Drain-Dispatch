@@ -22,6 +22,25 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Build production Docker image without private files
+        run: docker build --tag draindispatch:ci .
+      - name: Verify production runtime dependencies
+        run: |
+          docker run --rm --entrypoint node draindispatch:ci --input-type=module -e '
+            const fs = await import("node:fs");
+            for (const dir of [".", "server", "client"])
+              if (fs.readdirSync(dir).some(name => /(?:^\.env(?:\.|$)|credentials)/i.test(name)))
+                throw new Error("Private configuration must not enter the production image");
+            await import("./server/dist/config.js");
+            await import("./server/dist/photon/worker.js");
+            await import("@google/genai");
+            await import("cloudinary");
+            await import("pg");
+            const sharp = (await import("sharp")).default;
+            const bytes = await sharp({create:{width:1,height:1,channels:3,background:"white"}}).jpeg().toBuffer();
+            if (!bytes.length) throw new Error("Production JPEG processing failed");
+            console.log("Compiled worker and cloud/image dependencies load without provider requests");
+          '
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - run: npm audit --audit-level=high

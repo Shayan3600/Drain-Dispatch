@@ -51,6 +51,47 @@ export function resolveDatabaseConfig(env: NodeJS.ProcessEnv): PoolConfig | unde
   return { host, user, password, database, port, ssl: local ? undefined : { rejectUnauthorized: true } };
 }
 
+export class ProductionConfigurationError extends Error {}
+
+/** Validate each service before opening a database or authenticating a provider. Errors contain names only. */
+export function validateProductionConfig(env: NodeJS.ProcessEnv, role: "api" | "worker"): void {
+  if (env.NODE_ENV !== "production") return;
+  const fail = (requirement: string): never => {
+    throw new ProductionConfigurationError(`Production configuration requires ${requirement}.`);
+  };
+  const required = (name: string) => {
+    if (!env[name]?.trim()) fail(name);
+  };
+  const httpsOrigin = (value: string | undefined, name: string) => {
+    let url: URL;
+    try { url = new URL(value || ""); }
+    catch { return fail(`a public HTTPS origin in ${name}`); }
+    if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash || url.pathname !== "/" ||
+      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))
+      fail(`a public HTTPS origin in ${name}`);
+  };
+  if (!env.WORKER_TOKEN || env.WORKER_TOKEN.length < 32) fail("WORKER_TOKEN with at least 32 characters");
+  if (role === "worker") {
+    const credentials = resolveSpectrumCredentials(env);
+    if (!credentials.projectId?.trim() || !credentials.projectSecret?.trim())
+      fail("SPECTRUM_PROJECT_ID and SPECTRUM_PROJECT_SECRET (legacy PHOTON names are accepted)");
+    httpsOrigin(env.API_URL, "API_URL");
+    return;
+  }
+  if (!resolveDatabaseConfig(env)) fail("DATABASE_URL or complete PostgreSQL host credentials");
+  if ((env.IMAGE_STORAGE ?? "cloudinary") !== "cloudinary") fail("IMAGE_STORAGE=cloudinary");
+  for (const name of ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "GEMINI_API_KEY"])
+    required(name);
+  if (!env.MODERATOR_TOKEN || env.MODERATOR_TOKEN.length < 32) fail("MODERATOR_TOKEN with at least 32 characters");
+  if (env.MODERATOR_TOKEN === env.WORKER_TOKEN) fail("different MODERATOR_TOKEN and WORKER_TOKEN values");
+  httpsOrigin(env.PUBLIC_APP_URL, "PUBLIC_APP_URL");
+  if (env.PUBLIC_API_URL) httpsOrigin(env.PUBLIC_API_URL, "PUBLIC_API_URL");
+  required("CLIENT_ORIGIN");
+  for (const origin of env.CLIENT_ORIGIN!.split(",")) httpsOrigin(origin.trim(), "CLIENT_ORIGIN");
+  const port = Number(env.PORT || 3001);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) fail("a valid PORT");
+}
+
 const spectrum = resolveSpectrumCredentials(process.env);
 export const config = {
   spectrumProjectId: spectrum.projectId,

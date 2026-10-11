@@ -1,4 +1,4 @@
-import { config as runtimeConfig } from "../config.js";
+import { config as runtimeConfig, validateProductionConfig, ProductionConfigurationError } from "../config.js";
 import { pathToFileURL } from "node:url";
 import {
   Spectrum,
@@ -240,6 +240,7 @@ export async function dispatchFollowups(
 }
 
 export async function startWorker(): Promise<void> {
+  validateProductionConfig(process.env, "worker");
   const projectId = runtimeConfig.spectrumProjectId;
   const projectSecret = runtimeConfig.spectrumProjectSecret;
   const token = process.env.WORKER_TOKEN;
@@ -341,7 +342,7 @@ if (
 ) {
   startWorker().catch((error) => {
     console.error(
-      error instanceof WorkerConfigurationError
+      error instanceof WorkerConfigurationError || error instanceof ProductionConfigurationError
         ? error.message
         : "Photon worker startup failed. Check private credentials and service connectivity.",
     );
