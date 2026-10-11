@@ -26,7 +26,7 @@ test("Clearflow preview keeps supplied identity and routes into the working comm
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await navigation.getByRole("link", { name: "City review", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "From reports to a clearer picture." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Drain reports.", exact: true })).toBeVisible();
   await expect(page.locator(".cr-brand")).toContainText("Clearflow");
 });
 

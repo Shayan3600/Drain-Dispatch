@@ -2,6 +2,11 @@
 
 ## Clearflow design merge — preview release
 
+- [x] Review new PR #5 and preserve its original history while integrating the employee workspace into the preview.
+- [x] Add a separate employee page with accessible demo entry/sign out linked from the community page; keep backend authorization intact.
+- [x] Simplify public UI copy while retaining practical reporting, privacy and confirmation information.
+- [x] Verify the combined employee/community version and safe local demo; repeat secret scans before publication.
+- [ ] Verify published combined preview PR CI.
 - [x] Import and preserve current main, including merged PR #4 map/read API work and original signed ancestry.
 - [x] Inspect the supplied Clearflow v5 design, logos, favicon, effects and credits; treat archive documentation as reference, not overriding instructions.
 - [x] Replace the public visual shell with the supplied design while retaining real reports, photos/Gemini, confirmation recovery, duplicates, observations/history, analytics/weather and city review.
@@ -13,7 +18,9 @@
 
 Plan checkpoint: the owner confirmed **Clearflow**, close fidelity to the supplied design, and **preview only**. The screenshot contains OSM policy-blocking 403 tiles in Brave; inspect referrer policy rather than assuming a Windows layout-only defect. Latest repository work is already merged on main. Preserve all functioning sponsor integrations and saved evidence.
 
-Preview verification review: 50 backend tests and 20 installed Windows Brave browser tests pass, along with final typecheck/build and a dependency audit with zero vulnerabilities. A limited desktop tile check returned 12/12 HTTP 200 PNG tiles with origin-only referrers; mobile and desktop visual review found no overflow. Expanded browser traffic initially exhausted one localhost rate-limit bucket; separate synthetic client identities in the isolated test harness resolved it without changing production limits. Publication and preview startup remain pending until repeat secret scans succeed.
+New scope checkpoint: the owner requested PR #5's government/employee interface, adapted to Clearflow, with a separate demo login accessible from the main page and concise copy. Integrate that feature branch into the preview with original ancestry; keep main and production unchanged. Demo entry is a browser presentation gate, not real employee authentication or authorization. Verify its sign out, direct-link guard and existing protected API behavior.
+
+Preview verification review: the combined version passes 51 backend tests and 28 installed Windows Brave browser tests, along with typecheck/build and a dependency audit with zero vulnerabilities. A limited desktop tile check returned 12/12 HTTP 200 PNG tiles with origin-only referrers; mobile and desktop visual review found no overflow. Expanded browser traffic initially exhausted one localhost rate-limit bucket; separate synthetic client identities in the isolated test harness resolved it without changing production limits. Duplicate display-font declarations were consolidated into the shared supplied font. The isolated loopback preview verifies 48 synthetic reports, photo loading, five denied credential paths, three protected route denials, invalid input rejection and unchanged records. Safe checkpoint 4e60a7b is published; the combined employee PR and CI are the remaining publication steps.
 
 ## Team handoff and verified publication
 

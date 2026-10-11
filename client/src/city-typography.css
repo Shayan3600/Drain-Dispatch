@@ -1,0 +1,67 @@
+/* Roles from Clearflow Website v5:
+   wordmark / outer display title -> Not Just Groovy, regular;
+   screen and card titles -> Segoe UI, medium;
+   fields / buttons / prose -> Segoe UI;
+   references and exported packet -> monospace for legibility.
+   Barstain Outline belongs only to the reference's decorative ribbon, which
+   this simplified city workspace does not include. */
+.city-review{
+  --cr-font-display:'Not Just Groovy','Segoe UI',sans-serif;
+  --cr-font-body:'Segoe UI',Arial,sans-serif;
+  font-family:var(--cr-font-body);
+  font-synthesis:none;
+}
+.city-review :is(h2,h3){font-family:var(--cr-font-body);font-style:normal}
+.city-review .cr-brand{font:400 26px/1.2 var(--cr-font-display);letter-spacing:-.5px}
+.city-review .cr-intro h1{
+  font:400 clamp(54px,5.8vw,77px)/1.15 var(--cr-font-display);
+  letter-spacing:-1px;
+  margin:12px 0 14px;
+}
+.city-review .cr-intro p{font:400 14px/1.8 var(--cr-font-body)}
+.city-review .cr-eyebrow{font:750 9px/1.6 var(--cr-font-body);letter-spacing:1.9px}
+.city-review .cr-nav{font:600 13px/1.5 var(--cr-font-body)}
+.city-review .cr-section-heading h2,
+.city-review .cr-map-heading h2,
+.city-review .cr-evidence>.cr-panel-heading h2{
+  font:500 22px/1.3 var(--cr-font-body);
+  letter-spacing:-.6px;
+}
+.city-review .cr-queue>.cr-panel-heading h2{font:550 19px/1.3 var(--cr-font-body);letter-spacing:-.5px}
+.city-review .cr-card-top strong{font:600 14px/1.5 var(--cr-font-body)}
+.city-review .cr-evidence h3{font:600 16px/1.4 var(--cr-font-body);letter-spacing:-.2px}
+.city-review .cr-evidence h3.cr-report-title{font:500 22px/1.3 var(--cr-font-body);letter-spacing:-.6px}
+.city-review .cr-card p{font:400 12px/1.7 var(--cr-font-body)}
+.city-review .cr-evidence p{font:400 12px/1.7 var(--cr-font-body)}
+.city-review .cr-filters label,.city-review .cr-select-label{font:600 11px/1.5 var(--cr-font-body)}
+.city-review .cr-select-trigger,.city-review .cr-filters input[type=search]{font:400 12px/1.5 var(--cr-font-body)}
+.city-review .cr-button{font:650 12px/1.5 var(--cr-font-body)}
+.city-review .cr-intro>.cr-button-primary{font-size:14px}
+.city-review .cr-button-subtle{font-size:11px}
+.city-review .cr-filters label.cr-check{font-weight:400}
+.city-review .cr-select-menu>li{font:400 12px/1.5 var(--cr-font-body)}
+.city-review .cr-option-copy strong{font:550 12px/1.5 var(--cr-font-body)}
+.city-review .cr-option-copy small{font:400 10px/1.5 var(--cr-font-body)}
+.city-review .cr-facts dt{font:600 11px/1.5 var(--cr-font-body);text-transform:none;letter-spacing:0}
+.city-review .cr-facts dd{font:400 13px/1.6 var(--cr-font-body)}
+.city-review :is(.cr-card small,.cr-cue,.cr-freshness,.cr-observation small,.cr-history small){font:400 10px/1.6 var(--cr-font-body)}
+.city-review .cr-reference{font:400 10px/1.6 ui-monospace,Consolas,monospace}
+.city-review .cr-evidence .cr-note{font-size:10px}
+.city-review .cr-footer strong{font:400 22px/1.2 var(--cr-font-display);letter-spacing:-.5px}
+.city-review .cr-footer strong>span{font:400 10px/1.6 var(--cr-font-body);letter-spacing:0}
+@media(max-width:1100px){.city-review .cr-intro h1{font-size:62px}}
+@media(max-width:800px){
+  .city-review .cr-brand{font-size:23px}
+  .city-review .cr-intro h1{font-size:49px}
+  .city-review .cr-intro p{font-size:12px}
+  .city-review .cr-nav{font-size:11px}
+}
+@media(max-width:600px){
+  .city-review .cr-brand{font-size:21px}
+  .city-review .cr-intro h1{font-size:clamp(40px,11.7vw,55px);line-height:1.19}
+  .city-review .cr-eyebrow{font-size:8px}
+  .city-review .cr-intro>.cr-button-primary{font-size:12px}
+  .city-review .cr-header>.cr-button{font-size:10px}
+  .city-review .cr-map-tools .cr-button{font-size:10px}
+  .city-review .cr-queue>.cr-panel-heading h2{font-size:19px}
+}

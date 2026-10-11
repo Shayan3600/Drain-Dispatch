@@ -139,7 +139,7 @@ export default function IncidentDetail({
                   <div>
                     <strong>
                       {o.source === "photon" || o.source === "imessage"
-                        ? "Messaging observation"
+                        ? "iMessage observation"
                         : "Community observation"}
                     </strong>
                     <small>{date(o.createdAt)}</small>
@@ -151,14 +151,14 @@ export default function IncidentDetail({
                     <img
                       className="evidence-photo"
                       src={o.photoUrl}
-                      alt="Community submitted photo evidence"
+                      alt="Submitted report photo"
                       loading="lazy"
                     />
                   </a>
                 )}
                 {o.assessment && (
                   <p className="ai-note">
-                    AI assessment · {o.assessment.visibleEvidence}
+                    Photo review · {o.assessment.visibleEvidence}
                     <br />
                     Uncertainty: {o.assessment.uncertainty}
                   </p>
@@ -207,7 +207,7 @@ export default function IncidentDetail({
             <MessageSquarePlus size={19} />
             Add a follow-up
           </h4>
-          <p>Share what you can observe safely at this same location.</p>
+          <p>Describe what changed at this location.</p>
           {success && (
             <div className="notice success" role="status">
               Your observation was saved.
@@ -225,7 +225,7 @@ export default function IncidentDetail({
               setDescription(e.target.value);
               setSuccess(false);
             }}
-            placeholder="Describe any changes or new visible evidence."
+            placeholder="What changed? What can you see?"
           />
           <label className="check-label">
             <input
@@ -250,8 +250,7 @@ export default function IncidentDetail({
           <div className="detail-disclaimer">
             <ShieldCheck size={20} />
             <p>
-              Community and moderator reviews are internal Clearflow
-              statuses. They do not confirm municipal acceptance or repair.
+              Clearflow status does not confirm Town acceptance or repairs.
             </p>
           </div>
           <a

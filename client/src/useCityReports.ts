@@ -30,7 +30,7 @@ export function useCityReports(data: CityReviewData, includeDemo: boolean) {
       setSnapshot(previous => ({ ...previous, refreshing: true }));
       try {
         const signal = AbortSignal.any([current.signal, AbortSignal.timeout(15000)]);
-        const incidents = await data.listIncidents({ demo: data.mode === "fixtures" ? true : includeDemo ? undefined : false }, signal);
+        const incidents = await data.listIncidents({ demo: includeDemo ? undefined : false }, signal);
         if (disposed || current.signal.aborted) return;
         setSnapshot(previous => ({ sourceKey, incidents, loading: false, refreshing: false, error: "", updatedAt: new Date(), version: previous.version + 1 }));
       } catch (reason) {

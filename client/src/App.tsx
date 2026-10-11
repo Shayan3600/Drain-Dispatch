@@ -100,28 +100,28 @@ export default function App() {
       label: "Active incidents",
       value: stats?.activeIncidents,
       icon: Droplets,
-      note: "Awaiting or under review",
+      note: "Open reports",
       color: "blue",
     },
     {
       label: "Community observations",
       value: stats?.observationCount,
       icon: Eye,
-      note: "Evidence from residents",
+      note: "Reports and follow-ups",
       color: "green",
     },
     {
       label: "Closed incidents",
       value: stats?.closedIncidents,
       icon: CheckCheck,
-      note: "With follow-up recorded",
+      note: "Marked closed",
       color: "teal",
     },
     {
       label: "Total incidents",
       value: stats?.totalIncidents,
       icon: MapPin,
-      note: "Real reports, all statuses",
+      note: "All statuses",
       color: "amber",
     },
   ];
@@ -169,14 +169,14 @@ export default function App() {
                 {weather?.alerts?.length
                   ? weather.alerts[0].event
                   : weather && !weather.unavailable
-                    ? "Official weather awareness"
-                    : "Weather context unavailable"}
+                    ? "Chapel Hill weather"
+                    : "Weather unavailable"}
               </strong>
               <span>
                 {weather?.alerts?.length
                   ? weather.alerts[0].headline
                   : weather && !weather.unavailable
-                    ? "No active rain, flood, or thunderstorm alerts returned for Chapel Hill. Conditions can change."
+                    ? "No current rain, flood or thunderstorm alerts for Chapel Hill."
                     : "Check the National Weather Service for current alerts."}
               </span>
             </div>
@@ -211,7 +211,7 @@ export default function App() {
               </span>
             </div>
           ) : null}
-          <p className="metrics-context">Community counts · Real reports only · Demo reports are excluded</p>
+          <p className="metrics-context">Real reports only · Demo reports are excluded</p>
           <section className="metrics" aria-label="Measured community activity">
             {metrics.map(({ label, value, icon: Icon, note, color }) => (
               <article className="metric-card" key={label}>
@@ -231,15 +231,15 @@ export default function App() {
           {showDemo && (
             <div className="demo-preview-notice" role="status">
               <span><strong>Demo preview</strong> · {visibleDemos.length} demo reports shown · {visibleDemos.filter(item => item.status !== "closed").length} active · {visibleDemos.filter(item => item.status === "closed").length} closed</span>
-              <small>Demo records are shown on the map. Real-report statistics above remain separate.</small>
+              <small>Demo reports are excluded from statistics.</small>
             </div>
           )}
           <section className="dashboard-section" id="dashboard">
             <div className="section-heading">
               <div>
-                <span className="eyebrow">OUR NEIGHBORHOOD, IN VIEW</span>
+                <span className="eyebrow">CHAPEL HILL REPORTS</span>
                 <h2>Community drainage map</h2>
-                <p>Explore reported concerns. Add context where it counts.</p>
+                <p>View reports and add observations.</p>
               </div>
               <div className="live-controls">
                 <span className="live-label">
@@ -263,8 +263,7 @@ export default function App() {
             {error && (
               <div className="notice error" role="alert">
                 <span>
-                  {error} Your report can be prepared while the service
-                  reconnects.
+                  {error}
                 </span>
                 <button className="text-link" onClick={() => void refresh()}>
                   Try again
@@ -344,7 +343,7 @@ export default function App() {
                   {loading && !updated ? (
                     <div className="list-empty">
                       <LoaderCircle size={28} className="spin" />
-                      <strong>Bringing the map into view…</strong>
+                      <strong>Loading reports…</strong>
                     </div>
                   ) : filtered.length ? (
                     filtered.map((i) => (
@@ -383,17 +382,17 @@ export default function App() {
                       </span>
                       <strong>
                         {error
-                          ? "The map is ready to reconnect"
+                          ? "Reports unavailable"
                           : incidents.length
                             ? "No matching reports"
-                            : "A fresh start for the neighborhood"}
+                            : "No reports yet"}
                       </strong>
                       <p>
                         {error
-                          ? "Incidents will appear when the reporting service is available."
+                          ? "Try refreshing to load reports."
                           : incidents.length
-                            ? "Try another filter to see more observations."
-                            : "Be the first to share a drainage observation. Your report will appear here after it is saved."}
+                            ? "Try another filter."
+                            : "Saved reports appear here."}
                       </p>
                       <button
                         className="button secondary compact"
@@ -420,7 +419,7 @@ export default function App() {
               <div className="dashboard-bottom">
                 <span>
                   <ShieldCheck size={14} />
-                  Community evidence, awaiting human review
+                  Community reports · Human review
                 </span>
                 <span>
                   {updated
@@ -434,20 +433,20 @@ export default function App() {
             <div className="section-heading">
               <div>
                 <span className="eyebrow">
-                  MEASURED ACTIVITY, SHARED AWARENESS
+                  REPORT STATISTICS
                 </span>
-                <h2>A community taking notice</h2>
-                <p>Reporting trends from actual incidents and observations.</p>
+                <h2>Reporting activity</h2>
+                <p>Counts and trends from saved reports.</p>
               </div>
               <span className="data-source">
                 <span className="pulse-dot" />
-                {stats ? "Live database metrics" : "Metrics unavailable"}
+                {stats ? "Live report counts" : "Metrics unavailable"}
               </span>
             </div>
             <div className="analytics-grid">
               <article className="analytics-card">
                 <div className="analytics-heading">
-                  <h3>What we're noticing</h3>
+                  <h3>Reports by type</h3>
                   <span>By concern type</span>
                 </div>
                 {Object.entries(categories).map(([key, label]) => {
@@ -514,8 +513,8 @@ export default function App() {
                     <Waves size={28} />
                     <p>
                       {stats
-                        ? "Your first reports will start the trend."
-                        : "Reporting metrics are unavailable right now."}
+                        ? "No reports yet."
+                        : "Statistics unavailable."}
                     </p>
                   </div>
                 )}
@@ -529,7 +528,7 @@ export default function App() {
                 </div>
                 {!!stats?.repeatedLocations?.length && (
                   <details className="recurring-areas">
-                    <summary>Explore recurring reporting areas</summary>
+                    <summary>Areas with repeated reports</summary>
                     <ul>
                       {stats.repeatedLocations.map((area, index) => (
                         <li key={index}>
@@ -553,23 +552,21 @@ export default function App() {
                   <Waves size={42} />
                   <Leaf size={27} />
                 </div>
-                <span className="eyebrow">EVERYTHING FLOWS TOGETHER</span>
+                <span className="eyebrow">STORMWATER</span>
                 <h3>
-                  Our streets connect
+                  Stormwater
                   <br />
-                  to our streams.
+                  resources
                 </h3>
                 <p>
-                  Visible drainage concerns are one part of a bigger water
-                  story. Better observations support awareness and informed
-                  follow-up.
+                  Read the Town’s stormwater guidance and reporting information.
                 </p>
                 <a
                   href="https://www.chapelhillnc.gov/Town-Government/Departments-and-Offices/Public-Works/Stormwater-Management"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Explore local stormwater <ArrowUpRight size={15} />
+                  Town stormwater resources <ArrowUpRight size={15} />
                 </a>
               </article>
             </div>

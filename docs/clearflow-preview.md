@@ -4,6 +4,10 @@ The owner supplied Clearflow Website v5 and confirmed the brand **Clearflow**, c
 
 The preview starts from current main `b9931a1`, including merged PR #4's city map controls, polling, stale-evidence warnings, read-only sort/metadata API and tests. Original signed history and the logo are preserved. Repository/package/database/internal identifiers remain compatible under the new public name.
 
+PR #5's employee interface is integrated with its original signed feature history. The review page uses Clearflow styling and the supplied logo, category/count marker palettes, accessible custom filters and saved API evidence. Counts indicate submissions, not hazard severity. The main page's **Employee login** link opens `/employee/login`; **Continue to demo** enters `/employee`. Sign out clears the tab's demo preference. `/city` remains a compatible employee entry. No passwords are collected and no backend permission is granted by this presentation gate.
+
+Marketing copy is replaced with short reporting instructions. Reporting confirmations, photo limits, Town reporting distinctions and necessary privacy/safety guidance remain.
+
 ## Preserved working behavior
 
 - Real web and iMessage reports, capped/sanitized photographs, Gemini interpretation and human review, Cloudinary storage and Tiger Data persistence.
@@ -22,10 +26,18 @@ The Windows Brave screenshot shows OSM HTTP 403 policy-error tiles. Both the pri
 
 Verified locally:
 
-- Final typecheck and production build pass; 50 backend tests pass; dependency audit reports zero vulnerabilities.
-- All 20 browser flows pass in installed Windows Brave: reporting, duplicate observation, uploaded JPEG persistence, editable mocked Gemini findings, private draft recovery, city polling/stale evidence, map recovery/resize/referrer privacy, Clearflow assets and mobile/accessibility controls.
+- Final typecheck and production build pass; 51 backend tests pass; dependency audit reports zero vulnerabilities.
+- All 28 browser flows pass in installed Windows Brave: reporting, duplicate observation, uploaded JPEG persistence, editable mocked Gemini findings, private draft recovery, city polling/stale evidence, map recovery/resize/referrer privacy, Clearflow assets, demo login/sign out, keyboard filters, count palettes and mobile/accessibility controls.
 - One limited desktop viewport returned 12/12 real OSM HTTP 200 PNG tiles, each with an origin-only referrer. Automated suites intercept tiles with synthetic responses; no bulk provider requests are needed.
 - Desktop and mobile visual checks preserve the supplied artwork and show no horizontal overflow. Performance controls support reduced motion, keyboard dismissal and restored focus. Screenshots contain only synthetic data and remain local.
 - The expanded test suite initially exhausted a shared localhost rate-limit bucket. Independent synthetic client identities in the isolated e2e harness fix test isolation; production rate limits are unchanged.
 
 Repeat source/index/history/public-build secret scans are required before publication. A reviewable preview PR and local preview will be recorded after those checks. Production remains unchanged. This preview does not establish a fresh live hosted iMessage test; real sponsor acceptance from the existing release remains documented separately.
+
+## Employee integration acceptance
+
+The combined version passes 51 backend tests, including additive/idempotent demo seeding and refusal to seed a remote database, and all 28 Brave browser tests with a clean exit. Synthetic desktop/mobile employee screenshots show no overflow or mutation requests. A single loaded display-font face is shared between community and employee pages.
+
+The separate loopback preview uses a fresh local PostgreSQL database with 48 labeled synthetic reports, 152 observations, 48 illustrations and 200 history events. Preview verification loads a saved photo, denies five credential/internal paths, returns 401 on three unauthenticated protected routes, rejects an invalid public submission and retains the original record count. Existing local and hosted data are untouched. Publication CI remains pending until recorded in the PR.
+
+To review from a fresh checkout: build, run `node --import tsx scripts/city-showcase.ts`, open its printed loopback origin, and use Employee login. Community demo counts require **Include labeled demo reports**; employee review includes labeled DEMO records automatically. The launcher owns a separate process and database; stop only that process when finished. No public tunnel is created for this preview.

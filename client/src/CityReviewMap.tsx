@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { MapContainer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { categories, statuses, type Incident } from "./types";
+import { cityIssueColors, cityMarkerStyle, countForeground } from "./cityMapStyle";
 import MapTiles, { ResponsiveMap } from "./MapTiles";
 
 export interface ReviewBounds { south: number; north: number; west: number; east: number }
@@ -12,7 +13,6 @@ export function insideReviewBounds(incident: Incident, bounds: ReviewBounds) {
   return incident.latitude >= bounds.south && incident.latitude <= bounds.north &&
     (bounds.east - bounds.west >= 360 || (west <= east ? longitude >= west && longitude <= east : longitude >= west || longitude <= east));
 }
-function color(incident: Incident) { return incident.status === "closed" ? "#679e62" : incident.issueType === "standing_water" ? "#4b94c3" : "#d9923a"; }
 function Controls({ incidents, selected, onBounds }: { incidents: Incident[]; selected?: Incident; onBounds: (bounds: ReviewBounds) => void }) {
   const map = useMap();
   const fitted = useRef(false);
@@ -34,10 +34,19 @@ export default function CityReviewMap({ incidents, selected, onSelect, onBounds 
       <MapTiles />
       <ResponsiveMap />
       <Controls incidents={incidents} selected={selected} onBounds={onBounds} />
-      {incidents.map(item => <Marker key={item.id} position={[item.latitude,item.longitude]} title={`${categories[item.issueType]} · ${statuses[item.status]}`} alt={`${categories[item.issueType]} · ${statuses[item.status]}`} eventHandlers={{click:() => onSelect(item)}} icon={L.divIcon({className:"",html:`<span class="map-pin ${item.id === selected?.id ? "chosen" : ""}" style="--pin:${color(item)}"><span></span></span>`,iconSize:[30,36],iconAnchor:[15,34]})}>
-        <Popup><strong>{categories[item.issueType]}</strong><p>{item.description}</p><p>{statuses[item.status]}{item.isDemo ? " · DEMO / TEST" : ""}</p><button className="popup-button" onClick={() => onSelect(item)}>Review evidence</button></Popup>
-      </Marker>)}
+      {incidents.map(item => {
+        const style = cityMarkerStyle(item);
+        const label = `${categories[item.issueType]} · ${style.count} submission${style.count===1 ? "" : "s"} · ${statuses[item.status]}`;
+        return <Marker key={item.id} position={[item.latitude,item.longitude]} title={label} alt={label} eventHandlers={{click:() => onSelect(item)}} icon={L.divIcon({className:"",html:`<span class="map-pin ${item.id === selected?.id ? "chosen" : ""} ${item.status === "closed" ? "cr-pin-closed" : ""}" data-band="${style.band}" data-submissions="${style.count}" style="--pin:${style.color};--pin-ink:${style.foreground}"><span>${style.count>99 ? "99+" : style.count}</span></span>`,iconSize:[34,40],iconAnchor:[17,38]})}>
+          <Popup><strong>{categories[item.issueType]}</strong><p>{item.description}</p><p>{style.count} submission{style.count===1 ? "" : "s"} (not unique people)</p><p>{statuses[item.status]}{item.isDemo ? " · DEMO / TEST" : ""}</p><button className="popup-button" onClick={() => onSelect(item)}>Review evidence</button></Popup>
+        </Marker>;
+      })}
     </MapContainer>
-    <div className="cr-map-legend" aria-label="Map legend"><span>Orange: other active concerns</span><span>Blue: standing water</span><span>Green: closed community report</span><span>Ring: selected report</span></div>
+    <div className="cr-map-legend" aria-label="Map legend">
+      <div className="cr-legend-categories">{Object.entries(categories).map(([category,label])=><div className="cr-legend-category" key={category}>
+        <strong>{label}</strong><div className="cr-shade-scale" aria-label={`${label}: 1 to 5 or more submissions`}>{cityIssueColors[category as Incident["issueType"]].map((shade,index)=><span className="cr-legend-shade" key={shade} style={{backgroundColor:shade,color:countForeground(shade)}} title={`${index===4 ? "5 or more" : index+1} submissions`}>{index===4 ? "5+" : index+1}</span>)}</div>
+      </div>)}</div>
+      <p className="cr-legend-notes">Darker = more submissions, not severity or unique people. 5+ shares the darkest shade. Dashed border = closed community report. Ring = selected report.</p>
+    </div>
   </div>;
 }

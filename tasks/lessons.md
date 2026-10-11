@@ -1,5 +1,7 @@
 # Engineering lessons
 
+- Use short, concrete product copy: report, location, photo, history, saved. Preserve essential confirmation and privacy information; avoid vague marketing slogans when the owner asks for concise language.
+- A demonstrative employee login must say it is a demo, collect no real account credentials, and leave protected backend authorization unchanged.
 - A preview-only instruction overrides earlier production deployment authorization for that release. Preserve the live deployment, public URLs and worker while preparing the new design for review.
 - Diagnose map failures from actual response evidence. OSM 403 policy tiles are different from map-container sizing failures; verify both page and server referrer policies in the reported browser. Cross-origin map requests may send the origin, never private confirmation paths or tokens.
 - Import current teammate work before replacing a visual shell, and preserve real reporting and data contracts when a supplied design contains a static download-only mock form.

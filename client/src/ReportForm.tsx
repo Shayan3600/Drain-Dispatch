@@ -255,20 +255,19 @@ export default function ReportForm({
           <div className="success-icon">
             <CheckCircle2 size={44} />
           </div>
-          <h3>{alreadySaved ? "Your report is already on the map." : "A clearer picture, thanks to you."}</h3>
+          <h3>{alreadySaved ? "Your report is already on the map." : "Report saved."}</h3>
           <p>
-            {alreadySaved ? "Open the dashboard to view its observations and recorded status." : <>Your{" "}
+            {alreadySaved ? "View your report on the dashboard." : <>Your{" "}
             {match
               ? "observation has been added to the existing incident"
-              : "report is saved and ready for community review"}
+              : "report is on the map"}
             .</>}
           </p>
           <div className="reference">
             REPORT REFERENCE <strong>{result.id}</strong>
           </div>
           <p className="muted">
-            Clearflow review is separate from municipal action. You can also
-            send this information to the Town.
+            To contact the Town, use its official reporting form.
           </p>
           <a
             className="button secondary"
@@ -307,7 +306,7 @@ export default function ReportForm({
           {draftLoading ? (
             <div className="loading-inline">
               <LoaderCircle className="spin" />
-              Loading your secure draft…
+              Loading your draft…
             </div>
           ) : (
             <>
@@ -363,8 +362,7 @@ export default function ReportForm({
                             : ""}
                         </small>
                         <p className="muted">
-                          The suggested description and category above are
-                          editable. Confirm only what you observed.
+                          Edit the findings if needed. Confirm only what you observed.
                         </p>
                       </div>
                     )}
@@ -406,8 +404,7 @@ export default function ReportForm({
                       Review photo with Gemini
                     </button>
                     <p className="photo-note">
-                      AI helps describe visible evidence. It cannot identify the
-                      exact location or confirm the cause of flooding.
+                      Photo findings cannot confirm the location or cause of flooding.
                     </p>
                     <details className="photo-note photo-help">
                       <summary>Using an iPhone photo?</summary>
@@ -430,8 +427,7 @@ export default function ReportForm({
                     <div>
                       <h3>Place the pin where you observed the concern.</h3>
                       <p>
-                        Choose a safe vantage point. The pin identifies the
-                        drain or standing water.
+                        Mark the drain or standing water you observed.
                       </p>
                     </div>
                     <button
@@ -578,7 +574,7 @@ export default function ReportForm({
                   <h3>
                     {match
                       ? "Add evidence to an existing incident"
-                      : "Ready for community review"}
+                      : "Review your report"}
                   </h3>
                   <p className="muted">
                     Check your details before making this observation public.
@@ -596,7 +592,7 @@ export default function ReportForm({
                     <dd>
                       {match
                         ? `Observation for ${match.id.slice(0, 8)}`
-                        : "New incident · pending community review"}
+                        : "New incident · pending review"}
                     </dd>
                     <dt>Photo evidence</dt>
                     <dd>
@@ -606,8 +602,7 @@ export default function ReportForm({
                   <div className="notice">
                     <ShieldCheck size={18} />
                     <span>
-                      Report from a safe place. Stay out of roadways, drains,
-                      and floodwater. Leave maintenance to trained crews.
+                      Stay out of roadways, drains and floodwater. Leave maintenance to trained crews.
                     </span>
                   </div>
                   <p className="photo-note">
