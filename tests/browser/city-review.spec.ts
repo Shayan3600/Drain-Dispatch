@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { setupCityBrowser } from "./city-browser.setup";
+setupCityBrowser();
+import { chooseCityFilter, mockCityApi } from "./city-ui-helpers";
 
 test("city fixture review stays read-only and highlights one incident marker on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -6,12 +9,12 @@ test("city fixture review stays read-only and highlights one incident marker on 
   page.on("request", request => {
     if (new URL(request.url()).pathname.startsWith("/api/") && request.method() !== "GET") mutations++;
   });
+  await mockCityApi(page);
   await page.goto("/city");
-  await page.getByRole("button", { name: "Use sample reports", exact: true }).click();
-  await expect(page.getByText("Synthetic development data — not live reports", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", {name:"Drain reports.",exact:true})).toBeVisible();
   await expect(page.locator(".cr-card")).toHaveCount(2);
   await page.locator(".cr-card").filter({ hasText: "leaves covering a drain grate" }).click();
-  await expect(page.locator(".cr-evidence h3").first()).toContainText("SYNTHETIC DEMO");
+  await expect(page.locator(".cr-evidence h3").first()).toContainText("DEMO / TEST");
   await expect(page.locator(".cr-observation")).toHaveCount(2);
   await expect(page.locator(".cr-map .leaflet-marker-icon")).toHaveCount(2);
   await expect(page.locator(".cr-map .map-pin.chosen")).toHaveCount(1);
@@ -19,9 +22,9 @@ test("city fixture review stays read-only and highlights one incident marker on 
   await expect(packet).toHaveValue(/Observation submissions: 2 \(not unique people\)/);
   await expect(packet).toHaveValue(/Photo links: excluded by default/);
   await page.getByLabel("Include eligible public photo links").check();
-  await expect(packet).toHaveValue(/Photo link omitted: embedded, credentialed or non-public link format/);
+  expect(await packet.inputValue()).toContain(`Public photo: ${new URL(page.url()).origin}/uploads/test-`);
   expect(await packet.inputValue()).not.toContain("data:image");
-  await page.getByLabel("Community status").selectOption("all");
+  await chooseCityFilter(page,"Community status","All statuses");
   await expect(page.locator(".cr-card")).toHaveCount(3);
   await page.getByLabel("Multiple submissions").check();
   await expect(page.locator(".cr-card")).toHaveCount(1);
@@ -29,7 +32,7 @@ test("city fixture review stays read-only and highlights one incident marker on 
   expect(mutations).toBe(0);
 });
 
-test("city live review filters demos and does not call real test evidence synthetic", async ({ page }) => {
+test("city database review includes persisted demo records by default without exposing private fields", async ({ page }) => {
   const real = {
     id: "00000000-0000-4000-8000-000000000201", latitude: 35.9132, longitude: -79.0558,
     description: "Synthetic browser API fixture: ordinary report.", issueType: "standing_water",
@@ -52,9 +55,9 @@ test("city live review filters demos and does not call real test evidence synthe
     await route.fulfill({ json: body });
   });
   await page.goto("/city/");
-  await expect(page.locator(".cr-card")).toHaveCount(1);
-  await expect(page.getByLabel("Include demo reports")).not.toBeChecked();
-  await page.getByLabel("Include demo reports").check();
+  await expect(page.getByRole("button",{name:"Use sample reports",exact:true})).toHaveCount(0);
+  await expect(page.getByLabel("Include demo reports")).toHaveCount(0);
+  await expect(page).toHaveTitle("ClearFlow · City Review");
   await expect(page.locator(".cr-card")).toHaveCount(2);
   await page.locator(".cr-card").filter({ hasText: "approved test photograph report" }).click();
   await expect(page.locator(".cr-evidence h3").first()).toContainText("DEMO / TEST");
@@ -75,8 +78,8 @@ test("city packet copy uses the visible preview and provides manual fallback", a
       },
     } });
   });
+  await mockCityApi(page);
   await page.goto("/city");
-  await page.getByRole("button", { name: "Use sample reports", exact: true }).click();
   await page.locator(".cr-card").first().click();
   const packet = page.getByRole("textbox", { name: "Report packet preview" });
   await expect(packet).toBeVisible();
