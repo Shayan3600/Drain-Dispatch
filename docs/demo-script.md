@@ -32,11 +32,11 @@ Recorded backup and rehearsal remain pending until the live workflow is verified
 
 ## Operator checklist
 
-- Verify the API, private worker and temporary HTTPS session before judging; an ended tunnel invalidates its host even if the private token has time remaining.
+- Use the durable Railway dashboard at https://draindispatchserver-production.up.railway.app. Verify API health and the private Photon worker before judging. Keep labeled demo reports enabled for the saved test evidence.
 - Use a reporter-approved JPEG/PNG/WebP without identifying people. For HEIC, use a JPEG/PNG screenshot or Most Compatible capture. Stay in a safe place.
 - Keep confirmation links and provider conversations off shared source/logs. Never project a terminal containing private configuration.
 - Use RESUME in the same private conversation when a test URL changes; the saved photograph and findings do not need another upload. Opening a confirmed report should inspect it, not re-submit it.
 - Show labeled test records through the demo option. Explain that real metric cards exclude them; never relabel synthetic reports to make counts look larger.
 - For two-contributor evidence, state that the cloud probe used two simulated identities unless two humans actually performed the live step. No claim of municipal participation.
 - Keep a local screenshot backup in docs/screenshots and rehearse with a stopwatch. Phone recording and narrated two-minute backup remain owner-operated steps; do not claim they exist before recording.
-- Close the temporary session when the owner/judges finish or its announced safety deadline expires. Durable hosting requires a separate deployment.
+- Temporary tunnels are closed. Production uses the authorized durable Railway services; do not stop the hosted worker as though it were a temporary testing session. Keep a safe recorded fallback and verify the phone workflow before judging.
