@@ -12,14 +12,18 @@ Plan checkpoint: update the supplied Notion page in place, retaining team assign
 
 ## Production readiness and release
 
-- [x] Inspect available production host configuration and authentication without exposing values; Railway is available but not connected.
+- [x] Inspect available production host configuration and authentication without exposing values; Railway project and CLI are connected.
 - [x] Re-run meaningful release checks; verify production safety, migrations, public data labeling and persistent worker deployment requirements.
-- [ ] Deploy to the authorized production target when available, using dedicated secret configuration and safe source only.
-- [ ] Verify deployed health, report/photo persistence, dashboard and worker operation; record actual release status in the team handoff.
+- [x] Deploy to the authorized production target, using dedicated secret configuration and safe source only.
+- [x] Verify deployed health, report/photo persistence, dashboard and worker operation; record actual release status in the team handoff.
 
 Release checkpoint: the owner authorized production deployment when ready. A durable host and its authenticated account are required; an expired temporary tunnel is not production. Preserve database records, avoid destructive migrations and do not transfer private files.
 
 Release re-plan: Railway is connected to the owner's existing desirable-emotion production project; CLI authorization is complete. Its automatic monorepo services had no credentials and used development commands. Reuse the API service for built website/API and the other service for the persistent worker; preserve both services and all database records. New Railway services reject deprecated config-file settings, so use reviewed staged service configuration instead of assigning the legacy TOML paths. Transfer individual existing values only through dedicated variable stdin settings, suppressing diagnostics and never uploading .env files. PR #2 city-review is imported with original signed history; fix marker/demo labeling and verify the integrated routes before publication/merge/deployment.
+
+Release verification re-plan: parallel CI exposed a timing-dependent browser assertion that matched both the activity total and incident detail count. Scope the assertion to the incident dialog, preserving product behavior. All five reporting browser flows pass locally after the fix. Release commit 0243c778 is scanned and published; both push and PR CI passed before applying the reviewed non-destructive Railway deployment.
+
+Production review: Railway API and private worker are online, each with one running replica and none crashed. External HTTPS acceptance verified PostgreSQL/Timescale, two retained DEMO cards/markers, loaded photo/findings/history, mobile fit, city packet privacy, NWS, denied sensitive/protected routes and invalid input rejection. No dataset mutations were observed. Worker logs confirm real Photon authentication and listener startup. PR #1 merged; PR #2 closed as included, with original signed history and the teammate's concurrent logo preserved. The owner was asked for a fresh hosted RESUME check; that human check, deliberate restart testing and live consenting notifications are not claimed complete. See verification-evidence.md.
 
 ## Next milestones after real iPhone text test
 
@@ -103,7 +107,7 @@ Plan checkpoint: preserve all planned features and credential values; no environ
 - [x] Responsive accessible Frutiger Aero interface and loading/error states.
 - [x] Typecheck, build, backend tests, browser reporting/reload/detail flow, mobile QA.
 - [x] Commit and publish verified source to the new repository.
-- [ ] Frontend/API/Photon worker deployment and production database/CORS checks.
+- [x] Frontend/API/Photon worker deployment and production database/CORS checks.
 - [ ] .tech domain only if available with no paid purchase.
 - [x] Demo records clearly labeled and excluded from real metrics by default.
 - [x] Demo script, Devpost copy, track eligibility evidence and screenshots.
