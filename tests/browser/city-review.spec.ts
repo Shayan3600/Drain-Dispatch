@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("city fixture review stays read-only and highlights one incident marker on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

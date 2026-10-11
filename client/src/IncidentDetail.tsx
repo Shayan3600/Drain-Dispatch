@@ -250,7 +250,7 @@ export default function IncidentDetail({
           <div className="detail-disclaimer">
             <ShieldCheck size={20} />
             <p>
-              Community and moderator reviews are internal DrainDispatch
+              Community and moderator reviews are internal Clearflow
               statuses. They do not confirm municipal acceptance or repair.
             </p>
           </div>

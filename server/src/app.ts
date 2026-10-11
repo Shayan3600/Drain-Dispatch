@@ -54,6 +54,9 @@ export function createApp(db: Database) {
   if (process.env.TRUST_PROXY === "1") app.set("trust proxy", 1);
   app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    // Map providers require a Referer. Send only the origin cross-origin so
+    // private confirmation paths and tokens never accompany map/photo requests.
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
     contentSecurityPolicy: {
       directives: {
         // Production pages load public map tiles and Cloudinary/legacy HTTPS photo evidence.
@@ -370,7 +373,7 @@ export function createApp(db: Database) {
         {
           headers: {
             "User-Agent":
-              "DrainDispatch HackNC prototype (community stormwater observations)",
+              "Clearflow HackNC prototype (community stormwater observations)",
             Accept: "application/geo+json",
           },
           signal: AbortSignal.timeout(8000),

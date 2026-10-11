@@ -44,7 +44,7 @@ const inputSchema = z.object({
   chatId: z.string().min(1).max(500).optional(),
 });
 const help =
-  "DrainDispatch organizes community drainage observations. Send REPORT followed by a description, or send a JPEG, PNG, or WebP photo. We will send a private link to confirm the location before publishing. RESUME reopens your latest draft or confirmed report with a fresh private link. STATUS <incident UUID>; NEARBY <latitude> <longitude> <category>; OBSERVE <incident UUID> CONFIRM <description> (only after checking it is the same drain). Categories: blocked_drain, standing_water, damaged_drain, other. CONSENT enables private follow-up messages about reports you submit; STOP disables them. Follow-ups require the connected Photon worker and are only delivered to private conversations. Stay out of roadways, drains, and floodwater. This is not an emergency service.";
+  "Clearflow organizes community drainage observations. Send REPORT followed by a description, or send a JPEG, PNG, or WebP photo. We will send a private link to confirm the location before publishing. RESUME reopens your latest draft or confirmed report with a fresh private link. STATUS <incident UUID>; NEARBY <latitude> <longitude> <category>; OBSERVE <incident UUID> CONFIRM <description> (only after checking it is the same drain). Categories: blocked_drain, standing_water, damaged_drain, other. CONSENT enables private follow-up messages about reports you submit; STOP disables them. Follow-ups require the connected Photon worker and are only delivered to private conversations. Stay out of roadways, drains, and floodwater. This is not an emergency service.";
 const inFlight = new WeakMap<
   Reporting,
   Map<string, { payloadHash: string; operation: Promise<MessageReply> }>
@@ -174,7 +174,7 @@ async function command(
   const upper = text.toUpperCase();
   if (!input.photo && /^(HELP|HI|HELLO|HEY|START)$/.test(upper)) return help;
   if (!input.photo && upper === "RESUME") {
-    if (!input.chatId) return "Send RESUME in a private conversation with DrainDispatch so your recovery link is not shared with a group.";
+    if (!input.chatId) return "Send RESUME in a private conversation with Clearflow so your recovery link is not shared with a group.";
     return reporting.db.transaction(async c => {
       const receipt = (await c.query("SELECT response_text FROM message_receipts WHERE message_id=$1 FOR UPDATE", [key])).rows[0];
       if (receipt?.response_text) return receipt.response_text as string;
@@ -226,7 +226,7 @@ async function command(
       return "Send STATUS followed by the full incident UUID from your confirmation screen.";
     try {
       const report = await reporting.detail(id.data);
-      return `Incident ${report.id}: ${report.status.replaceAll("_", " ")}. ${report.observationCount} observation(s). These are DrainDispatch community statuses, not municipal repair confirmations.`;
+      return `Incident ${report.id}: ${report.status.replaceAll("_", " ")}. ${report.observationCount} observation(s). These are Clearflow community statuses, not municipal repair confirmations.`;
     } catch (error) {
       if (error instanceof AppError && error.status === 404)
         return "That incident was not found. Check the full reference and try again.";

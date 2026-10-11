@@ -342,7 +342,7 @@ export class Reporting {
       throw new AppError(
         410,
         "DRAFT_EXPIRED",
-        "This confirmation link has expired. Send RESUME in your private DrainDispatch iMessage conversation to reopen your latest report without another upload.",
+        "This confirmation link has expired. Send RESUME in your private Clearflow iMessage conversation to reopen your latest report without another upload.",
       );
     return {
       id: r.id,

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const report = {id:"00000000-0000-4000-8000-000000000301",latitude:35.9132,longitude:-79.0558,description:"City tools fixture report",issueType:"blocked_drain",status:"pending_review",isDemo:false,createdAt:"2026-10-10T12:00:00Z",updatedAt:"2026-10-10T12:00:00Z",latestObservationAt:"2026-10-10T12:00:00Z",hasPhoto:true,observationCount:1};
 

@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { categories, statuses, type Incident } from "./types";
+import MapTiles, { ResponsiveMap } from "./MapTiles";
 
 export interface ReviewBounds { south: number; north: number; west: number; east: number }
 export function insideReviewBounds(incident: Incident, bounds: ReviewBounds) {
@@ -30,7 +31,8 @@ export default function CityReviewMap({ incidents, selected, onSelect, onBounds 
 }) {
   return <div className="cr-city-map">
     <MapContainer center={[35.9132,-79.0558]} zoom={14} scrollWheelZoom={false}>
-      <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <MapTiles />
+      <ResponsiveMap />
       <Controls incidents={incidents} selected={selected} onBounds={onBounds} />
       {incidents.map(item => <Marker key={item.id} position={[item.latitude,item.longitude]} title={`${categories[item.issueType]} · ${statuses[item.status]}`} alt={`${categories[item.issueType]} · ${statuses[item.status]}`} eventHandlers={{click:() => onSelect(item)}} icon={L.divIcon({className:"",html:`<span class="map-pin ${item.id === selected?.id ? "chosen" : ""}" style="--pin:${color(item)}"><span></span></span>`,iconSize:[30,36],iconAnchor:[15,34]})}>
         <Popup><strong>{categories[item.issueType]}</strong><p>{item.description}</p><p>{statuses[item.status]}{item.isDemo ? " · DEMO / TEST" : ""}</p><button className="popup-button" onClick={() => onSelect(item)}>Review evidence</button></Popup>

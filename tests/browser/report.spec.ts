@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import sharp from "sharp";
 test("browser creates a report, reloads it, and adds follow-up evidence", async ({
   page,

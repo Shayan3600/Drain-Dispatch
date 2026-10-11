@@ -288,7 +288,7 @@ export async function startWorker(): Promise<void> {
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
   console.info(
-    "DrainDispatch Photon project authenticated; incoming message listener is running through the central API.",
+    "Clearflow Photon project authenticated; incoming message listener is running through the central API.",
   );
   try {
     for await (const [space, message] of app.messages) {
@@ -318,7 +318,7 @@ export async function startWorker(): Promise<void> {
             await message.reply(
               error instanceof ApiRequestError
                 ? error.message
-                : "DrainDispatch could not finish this request. Try again shortly. If you received a confirmation link earlier, use that link first.",
+                : "Clearflow could not finish this request. Try again shortly. If you received a confirmation link earlier, use that link first.",
             );
           } catch {
             console.error("The provider reply failed.");

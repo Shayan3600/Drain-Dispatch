@@ -1,0 +1,306 @@
+{
+  "project": "Clearflow",
+  "verifiedDate": "2026-10-10",
+  "notes": "Sources record provenance, not a blanket reuse licence. Unknown original creators are explicitly marked.",
+  "assets": [
+    {
+      "file": "drop-logo.png",
+      "name": "Clearflow drop logo",
+      "kind": "supplied image",
+      "source": "User-supplied DropLogo.png",
+      "creator": "Creator not identified in the supplied file",
+      "licence": "No licence supplied",
+      "usage": "Header, footer and favicon",
+      "sha256": "f643f222f6645cb7211cfbdce0d690a0c7505913aa194fbbb86f6ceace8dea0f",
+      "bytes": 1461
+    },
+    {
+      "file": "aquarium-tv.png",
+      "name": "Retro aquarium TV and fish bowl",
+      "kind": "generated artwork",
+      "source": "assets/credits/image-prompts.md",
+      "creator": "Generated with OpenAI Imagegen during Clearflow development",
+      "licence": "Generated project artwork; no third-party image licence supplied",
+      "usage": "Drain care illustration",
+      "sha256": "ddbc9f6496eab7edb44944f92b4de6e93a30eff7f414fe62da4eb23f11d46dc2",
+      "bytes": 2798864
+    },
+    {
+      "file": "goldfish-banner.png",
+      "name": "Goldfish banner",
+      "kind": "generated artwork",
+      "source": "assets/credits/image-prompts.md",
+      "creator": "Generated with OpenAI Imagegen during Clearflow development",
+      "licence": "Generated project artwork; no third-party image licence supplied",
+      "usage": "Closing report banner",
+      "sha256": "82edecc041d98160609088dfc44fa7dc9e72ac4d3307c5bfdd3f83bde7236188",
+      "bytes": 3187261
+    },
+    {
+      "file": "tank-top.avif",
+      "name": "Aquarium top rim",
+      "kind": "supplied aquarium image",
+      "source": "https://files.catbox.moe/npo20n.avif",
+      "creator": "Original creator not identified in the supplied aquarium example",
+      "licence": "No licence supplied; Catbox is the source host, not an author credit",
+      "usage": "Layered animated aquarium",
+      "sha256": "4ac31b3d735d740fd464f4408cf2adadc19fbfdb205dc5696afdec038c423168",
+      "bytes": 4752
+    },
+    {
+      "file": "tank-bottom.avif",
+      "name": "Aquarium base and switch housing",
+      "kind": "supplied aquarium image",
+      "source": "https://files.catbox.moe/9o4qz4.avif",
+      "creator": "Original creator not identified in the supplied aquarium example",
+      "licence": "No licence supplied; Catbox is the source host, not an author credit",
+      "usage": "Layered animated aquarium",
+      "sha256": "5855c7285fbfa81baf0487b44c9cb255b81d25e59dc7e91187b4d1ac256b8714",
+      "bytes": 7688
+    },
+    {
+      "file": "reef-far.avif",
+      "name": "Rear reef layer",
+      "kind": "supplied aquarium image",
+      "source": "https://files.catbox.moe/vzglvd.avif",
+      "creator": "Original creator not identified in the supplied aquarium example",
+      "licence": "No licence supplied; Catbox is the source host, not an author credit",
+      "usage": "Layered animated aquarium",
+      "sha256": "db6ac853417b9893ce1d9c524802ea00887fe96fd29a88d5ee0da1b823e6f1f5",
+      "bytes": 28041
+    },
+    {
+      "file": "reef-near.avif",
+      "name": "Foreground reef layer",
+      "kind": "supplied aquarium image",
+      "source": "https://files.catbox.moe/len8o6.avif",
+      "creator": "Original creator not identified in the supplied aquarium example",
+      "licence": "No licence supplied; Catbox is the source host, not an author credit",
+      "usage": "Layered animated aquarium",
+      "sha256": "1452d83dde52040d61e4e4d03e1bd504ba57cda49678196868c67227fca71d2f",
+      "bytes": 20927
+    },
+    {
+      "file": "reef-fish.avif",
+      "name": "Background fish layer",
+      "kind": "supplied aquarium image",
+      "source": "https://files.catbox.moe/05azhb.avif",
+      "creator": "Original creator not identified in the supplied aquarium example",
+      "licence": "No licence supplied; Catbox is the source host, not an author credit",
+      "usage": "Layered animated aquarium",
+      "sha256": "1bf5ce1aed9875413c6bdb03a01b15cc66eb9b02d6090a258300010e49980651",
+      "bytes": 8454
+    },
+    {
+      "file": "clownfish.avif",
+      "name": "Clownfish",
+      "kind": "supplied aquarium image",
+      "source": "https://files.catbox.moe/qnfy5o.avif",
+      "creator": "Original creator not identified in the supplied aquarium example",
+      "licence": "No licence supplied; Catbox is the source host, not an author credit",
+      "usage": "Animated aquarium and glass fish bowls",
+      "sha256": "dd834d6fa4b847474e11d5f26e678159c1e0168170903ac468c5d1e786c03bda",
+      "bytes": 4050
+    },
+    {
+      "file": "zebrafish.avif",
+      "name": "Zebra fish",
+      "kind": "supplied aquarium image",
+      "source": "https://files.catbox.moe/lina97.avif",
+      "creator": "Original creator not identified in the supplied aquarium example",
+      "licence": "No licence supplied; Catbox is the source host, not an author credit",
+      "usage": "Animated aquarium and glass fish bowls",
+      "sha256": "0d26f28d7221e21a7f94dc8e5d14e5da889aee377d9738f307b12cb285349e69",
+      "bytes": 6701
+    },
+    {
+      "file": "butterflyfish.avif",
+      "name": "Butterfly fish",
+      "kind": "supplied aquarium image",
+      "source": "https://files.catbox.moe/8qyn7u.avif",
+      "creator": "Original creator not identified in the supplied aquarium example",
+      "licence": "No licence supplied; Catbox is the source host, not an author credit",
+      "usage": "Animated aquarium and glass fish bowls",
+      "sha256": "2802feceffa0508a508f9c568ab0de16dbab4aceb045648126942b0e83a0c8c6",
+      "bytes": 7107
+    },
+    {
+      "file": "template-water.png",
+      "name": "Water texture from the original template",
+      "kind": "retained template image",
+      "source": "Frutiger Aero Website.zip → src/assets/aero-water-background.png",
+      "creator": "Original creator not identified in the supplied template",
+      "licence": "No image licence supplied",
+      "usage": "Retained in the package; not displayed in the current layout",
+      "sha256": "9638f75554b27560bfd0ce0a329c9554ca9a9550c78467bd00f34a6916f5e50a",
+      "bytes": 96944
+    },
+    {
+      "file": "favicon.svg",
+      "name": "Earlier vector drop favicon",
+      "kind": "custom vector illustration",
+      "source": "assets/favicon.svg",
+      "creator": "Created for Clearflow through iterative work with Codex",
+      "licence": "Project-created source; no external asset",
+      "usage": "Retained earlier asset; current favicon is the supplied pixel logo",
+      "sha256": "b9aa077e21c260770b3687f14a43d825199ece2b40173c504a96262e349749f9",
+      "bytes": 410
+    },
+    {
+      "file": "not-just-groovy.ttf",
+      "name": "Not Just Groovy",
+      "kind": "font",
+      "source": "https://www.fontspace.com/not-just-groovy-font-f13930",
+      "creator": "Zdeněk Gromnica / FutureMillennium",
+      "licence": "CC BY-NC-ND 3.0; unmodified font; noncommercial use with attribution",
+      "licenceFile": "assets/Not-Just-Groovy-LICENSE.txt",
+      "usage": "Headings and Clearflow wordmark",
+      "sha256": "aa2e03c8dc1b710505c8974838e7b17a22dec90aace65d9850634ba4f1f8134c",
+      "bytes": 21216
+    },
+    {
+      "file": "barstain-outline.otf",
+      "name": "The Barstain — Outline demo",
+      "kind": "font",
+      "source": "https://www.fontspace.com/the-barstain-font-f130478",
+      "creator": "burntilldead",
+      "licence": "Demo; a commercial licence is separate",
+      "licenceFile": "assets/Barstain-LICENSE.txt",
+      "usage": "CLEARFLOW text in the shaded ribbon",
+      "sha256": "a26bd4ecef83902abd660d66e0d2eefaa0a9b67d30e3a011834221fb4c674080",
+      "bytes": 57780
+    },
+    {
+      "file": "instrument-serif-regular.ttf",
+      "name": "Instrument Serif — regular",
+      "kind": "font",
+      "source": "https://github.com/Instrument/instrument-serif",
+      "creator": "Rodrigo Fuenzalida; direction by Jordan Egstad, JD Hooge and Jack De Caluwé for Instrument",
+      "licence": "SIL Open Font License 1.1",
+      "licenceFile": "assets/Instrument-Serif-LICENSE.txt",
+      "usage": "Retained from the earlier typography version; current display headings use Not Just Groovy",
+      "sha256": "a99e3db50076202713812ed541feeb23ffeebb61db1fa6b1cf48fe590d37ef18",
+      "bytes": 62284
+    },
+    {
+      "file": "instrument-serif-italic.ttf",
+      "name": "Instrument Serif — italic",
+      "kind": "font",
+      "source": "https://github.com/Instrument/instrument-serif",
+      "creator": "Rodrigo Fuenzalida; direction by Jordan Egstad, JD Hooge and Jack De Caluwé for Instrument",
+      "licence": "SIL Open Font License 1.1",
+      "licenceFile": "assets/Instrument-Serif-LICENSE.txt",
+      "usage": "Retained from the earlier typography version; current display headings use Not Just Groovy",
+      "sha256": "fecf4861d5202405b8bd45c683858b6870642a026784fe0dbf88ff55dedee8a0",
+      "bytes": 64208
+    },
+    {
+      "file": "bubble-pop.wav",
+      "name": "Bubble pop cue",
+      "kind": "custom audio",
+      "source": "assets/credits/bubble-sound.cjs",
+      "creator": "Synthesized locally for Clearflow",
+      "licence": "Project-created synthesis; no external recording",
+      "usage": "Clicking a bubble",
+      "sha256": "6d0bf0c413dcf97be83d355f098f6365e7f7f64ebae1c763a410f0acb4517a51",
+      "bytes": 16802
+    },
+    {
+      "file": "switch-click.wav",
+      "name": "Aquarium rocker-switch click",
+      "kind": "custom audio",
+      "source": "assets/credits/switch-sound.cjs",
+      "creator": "Synthesized locally for Clearflow",
+      "licence": "Project-created synthesis; no external recording",
+      "usage": "Activating the aquarium light switch",
+      "sha256": "92d988a36a617287e86ed4b1b07c5efb47abc1a49e68f9c0684c9b0b2b83acc1",
+      "bytes": 7542
+    },
+    {
+      "file": "vendor/gsap.min.js",
+      "name": "GSAP core",
+      "kind": "library",
+      "source": "https://github.com/greensock/GSAP",
+      "creator": "GreenSock",
+      "licence": "GSAP Standard License",
+      "licenceFile": "assets/vendor/GSAP-README.md",
+      "usage": "Supplied GSAP-master.zip; opening, hover, dropdown and scrolling animation",
+      "sha256": "92bb9a96476f983d212a2bc4f54c889039c1696dd4461d40a736860938570fbb",
+      "bytes": 72927
+    },
+    {
+      "file": "vendor/ScrollTrigger.min.js",
+      "name": "GSAP ScrollTrigger",
+      "kind": "library",
+      "source": "https://github.com/greensock/GSAP",
+      "creator": "GreenSock",
+      "licence": "GSAP Standard License",
+      "licenceFile": "assets/vendor/GSAP-README.md",
+      "usage": "Supplied GSAP-master.zip; opening, hover, dropdown and scrolling animation",
+      "sha256": "b0b14d67b55b0c43c756ac0b106cfcb09d0879945f6ead64451065b0672916a2",
+      "bytes": 44575
+    },
+    {
+      "file": "vendor/liquid-glass.js",
+      "name": "Liquid Glass JS",
+      "kind": "library",
+      "source": "https://github.com/dashersw/liquid-glass-js",
+      "creator": "Armagan Amcalar",
+      "licence": "MIT",
+      "licenceFile": "assets/vendor/Liquid-Glass-LICENSE.txt",
+      "usage": "Supplied liquid-glass-js-main.zip; refractive glass surfaces",
+      "sha256": "7080217b7fb7e422d2b1f4043342d34fddafaed0a91b54d3f9105361c0f70d65",
+      "bytes": 25900
+    },
+    {
+      "file": "vendor/html2canvas.min.js",
+      "name": "html2canvas 1.4.1",
+      "kind": "library",
+      "source": "https://github.com/niklasvh/html2canvas",
+      "creator": "Niklas von Hertzen",
+      "licence": "MIT",
+      "licenceFile": "assets/vendor/html2canvas-LICENSE.txt",
+      "usage": "Page background sampling for glass",
+      "sha256": "e87e550794322e574a1fda0c1549a3c70dae5a93d9113417a429016838eab8cb",
+      "bytes": 198689
+    }
+  ],
+  "customInterface": {
+    "creator": "Developed for Clearflow through iterative work with Codex",
+    "source": [
+      "index.html",
+      "style.css",
+      "theme-v2.css",
+      "app.js",
+      "effects.js",
+      "report-archive.js"
+    ],
+    "includes": [
+      "CSS fish bowls and grass",
+      "SVG butterflies and performance icon",
+      "CSS drain, pin and folder illustrations",
+      "Aero bubbles and glossy TV housings",
+      "Report form and motion interactions"
+    ]
+  },
+  "systemFonts": [
+    {
+      "name": "Segoe UI",
+      "creator": "Microsoft; Segoe family designed by Steve Matteson",
+      "source": "https://learn.microsoft.com/en-us/typography/font-list/segoe-ui",
+      "usage": "Device-provided body font; not redistributed"
+    },
+    {
+      "name": "Arial",
+      "creator": "Robin Nicholas and Patricia Saunders / Monotype",
+      "source": "https://learn.microsoft.com/en-us/typography/font-list/arial",
+      "usage": "Device-provided fallback; not redistributed"
+    },
+    {
+      "name": "Georgia",
+      "creator": "Matthew Carter",
+      "source": "https://learn.microsoft.com/en-us/typography/font-list/georgia",
+      "usage": "Device-provided serif fallback; not redistributed"
+    }
+  ]
+}

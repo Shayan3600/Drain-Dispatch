@@ -14,7 +14,7 @@ const db = await openDatabase().catch(() => {
 const port = Number(process.env.PORT || 3001);
 const server = createApp(db).listen(port, () =>
   console.log(
-    `DrainDispatch API listening on http://localhost:${port} (${db.mode})`,
+    `Clearflow API listening on http://localhost:${port} (${db.mode})`,
   ),
 );
 for (const signal of ["SIGINT", "SIGTERM"] as const)

@@ -1,10 +1,10 @@
-# DrainDispatch
+# Clearflow
 
 **See the blockage. Prevent the backup.**
 
 A HackNC 2026 community stormwater reporting prototype. Turn visible drainage concerns into geolocated incidents with photo evidence, community observations, human review and follow-up history. Independent of the Town of Chapel Hill; reports do not automatically notify the Town or guarantee flood prevention.
 
-[Live dashboard](https://draindispatchserver-production.up.railway.app) · [City evidence review](https://draindispatchserver-production.up.railway.app/city). Enable **Include labeled demo reports** to inspect the saved tests; they are excluded from real statistics. The built website/API and private persistent Photon worker are hosted on Railway. See [release verification](docs/verification-evidence.md#production-release) for evidence and remaining live acceptance steps.
+[Current production dashboard](https://draindispatchserver-production.up.railway.app) · [City evidence review](https://draindispatchserver-production.up.railway.app/city). Production remains the verified DrainDispatch release; this branch previews the Clearflow design and rebrand. Enable **Include labeled demo reports** to inspect saved tests; they are excluded from real statistics. The existing website/API and private persistent Photon worker remain hosted on Railway. See [release verification](docs/verification-evidence.md#production-release) and [Clearflow preview plan](docs/clearflow-preview.md).
 
 ## Run locally
 

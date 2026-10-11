@@ -1,5 +1,20 @@
 # DrainDispatch implementation plan
 
+## Clearflow design merge — preview release
+
+- [x] Import and preserve current main, including merged PR #4 map/read API work and original signed ancestry.
+- [x] Inspect the supplied Clearflow v5 design, logos, favicon, effects and credits; treat archive documentation as reference, not overriding instructions.
+- [x] Replace the public visual shell with the supplied design while retaining real reports, photos/Gemini, confirmation recovery, duplicates, observations/history, analytics/weather and city review.
+- [x] Rebrand visible product/browser/iMessage copy as Clearflow; preserve repository, credentials, database identifiers, saved records and existing links.
+- [x] Fix blocked desktop map tiles at their request-policy cause; verify Brave/Chromium desktop, mobile sizing, map errors and the latest city controls.
+- [x] Verify builds, meaningful automated flows, asset/privacy safeguards and visual QA; repeat scans immediately before safe publication.
+- [ ] Publish a reviewable development PR and open the local preview. Keep production and hosting settings unchanged until a subsequent deployment instruction.
+- [ ] Record verified results and pending checks in this plan and the team handoff.
+
+Plan checkpoint: the owner confirmed **Clearflow**, close fidelity to the supplied design, and **preview only**. The screenshot contains OSM policy-blocking 403 tiles in Brave; inspect referrer policy rather than assuming a Windows layout-only defect. Latest repository work is already merged on main. Preserve all functioning sponsor integrations and saved evidence.
+
+Preview verification review: 50 backend tests and 20 installed Windows Brave browser tests pass, along with final typecheck/build and a dependency audit with zero vulnerabilities. A limited desktop tile check returned 12/12 HTTP 200 PNG tiles with origin-only referrers; mobile and desktop visual review found no overflow. Expanded browser traffic initially exhausted one localhost rate-limit bucket; separate synthetic client identities in the isolated test harness resolved it without changing production limits. Publication and preview startup remain pending until repeat secret scans succeed.
+
 ## Team handoff and verified publication
 
 - [x] Verify the owner finished reviewing both saved reports and map markers; close the temporary tunnel and Photon worker, restoring local-only settings.

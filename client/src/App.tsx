@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowDown,
-  ArrowRight,
   ArrowUpRight,
   CheckCheck,
   ChevronRight,
@@ -12,19 +10,19 @@ import {
   Leaf,
   LoaderCircle,
   MapPin,
-  Menu,
-  MessageCircle,
   Plus,
   RefreshCw,
   Search,
   ShieldCheck,
   Waves,
-  X,
 } from "lucide-react";
 import DrainMap from "./DrainMap";
 import IncidentDetail from "./IncidentDetail";
 import ReportForm from "./ReportForm";
 import ActivityTrend from "./ActivityTrend";
+import { ClearflowIntro, ClearflowCommunity, ClearflowFooter } from "./Clearflow";
+import "./clearflow-theme.css";
+import "./clearflow-live.css";
 import { api, date, list } from "./api";
 import {
   categories,
@@ -35,75 +33,6 @@ import {
   type Status,
   type Weather,
 } from "./types";
-const official =
-  "https://www.chapelhillnc.gov/Town-Government/Departments-and-Offices/Public-Works/Stormwater-Management/Flooding-and-Drainage";
-function Waterscape() {
-  return (
-    <svg
-      className="waterscape"
-      viewBox="0 0 720 350"
-      role="img"
-      aria-label="Illustration of green hills and a clear stream beneath a blue sky"
-    >
-      <defs>
-        <linearGradient id="sky" x2="0" y2="1">
-          <stop stopColor="#bcdfef" />
-          <stop offset="1" stopColor="#ecf8fa" />
-        </linearGradient>
-        <linearGradient id="water" x2="0" y2="1">
-          <stop stopColor="#8ed6dd" />
-          <stop offset="1" stopColor="#31899d" />
-        </linearGradient>
-        <linearGradient id="hill" x2="0" y2="1">
-          <stop stopColor="#b5d983" />
-          <stop offset="1" stopColor="#459370" />
-        </linearGradient>
-        <radialGradient id="sun">
-          <stop stopColor="#fffef2" />
-          <stop offset=".4" stopColor="#fffef2" stopOpacity=".85" />
-          <stop offset="1" stopColor="#fffef2" stopOpacity="0" />
-        </radialGradient>
-        <filter id="blur">
-          <feGaussianBlur stdDeviation="6" />
-        </filter>
-      </defs>
-      <rect width="720" height="350" fill="url(#sky)" />
-      <circle cx="554" cy="70" r="73" fill="url(#sun)" />
-      <g fill="white" opacity=".7" filter="url(#blur)">
-        <ellipse cx="174" cy="63" rx="75" ry="13" />
-        <ellipse cx="388" cy="102" rx="65" ry="10" />
-      </g>
-      <path
-        d="M0 206 Q124 103 264 176 Q404 98 548 166 Q667 113 720 135 V350 H0Z"
-        fill="#90bdac"
-        opacity=".6"
-      />
-      <path
-        d="M0 231 Q126 161 268 211 Q408 156 540 213 Q679 149 720 188 V350 H0Z"
-        fill="url(#hill)"
-      />
-      <path
-        d="M379 208 Q282 237 441 260 Q615 286 228 350 H670 Q775 299 492 256 Q350 232 408 212Z"
-        fill="url(#water)"
-      />
-      <path d="M0 254 Q148 218 311 248 Q293 292 84 350 H0Z" fill="#67a574" />
-      <path d="M0 280 Q129 234 255 267 Q163 301 152 350 H0Z" fill="#81ba73" />
-      <g fill="none" stroke="#ddf8f5" strokeLinecap="round" opacity=".65">
-        <path d="M382 230h24m-21 8h59m1 36h70m-33 8h78m-87 37h104m-152 15h103" />
-      </g>
-      <g fill="#326f5b">
-        <path d="M632 243v-70l-24 43h16l-21 27zm-11-29h23l-14-29zm40 39v-55l-21 35h13l-17 20z" />
-        <path d="M115 247v-54l-21 37h12l-16 17z" />
-      </g>
-      <g fill="#eff8d9" opacity=".6">
-        <circle cx="44" cy="297" r="2" />
-        <circle cx="78" cy="270" r="2" />
-        <circle cx="146" cy="274" r="2" />
-        <circle cx="202" cy="253" r="1.5" />
-      </g>
-    </svg>
-  );
-}
 export default function App() {
   const [incidents, setIncidents] = useState<Incident[]>([]),
     [stats, setStats] = useState<Stats>(),
@@ -117,7 +46,6 @@ export default function App() {
     [status, setStatus] = useState("active"),
     [query, setQuery] = useState(""),
     [showDemo, setShowDemo] = useState(false),
-    [mobileNav, setMobileNav] = useState(false),
     [focusedIncident, setFocusedIncident] = useState<Incident>(),
     [revealSavedReport, setRevealSavedReport] = useState(false);
   const draftToken = useMemo(
@@ -224,106 +152,13 @@ export default function App() {
     }
   }
   return (
-    <>
+    <div className="clearflow-home">
       <a href="#dashboard" className="skip-link">
         Skip to incident dashboard
       </a>
-      <header className="site-header">
-        <div className="header-inner">
-          <a href="/" className="brand" aria-label="DrainDispatch home">
-            <span className="brand-mark">
-              <Droplets size={25} />
-            </span>
-            <span>
-              Drain<span className="brand-accent">Dispatch</span>
-              <small>COMMUNITY STORMWATER WATCH</small>
-            </span>
-          </a>
-          <nav
-            className={mobileNav ? "nav-open" : ""}
-            aria-label="Main navigation"
-          >
-            <a href="#dashboard" onClick={() => setMobileNav(false)}>
-              Live map
-            </a>
-            <a href="#community" onClick={() => setMobileNav(false)}>
-              How it works
-            </a>
-            <a href="#impact" onClick={() => setMobileNav(false)}>
-              Community impact
-            </a>
-          </nav>
-          <div className="header-actions">
-            <button
-              className="button primary report-header"
-              onClick={() => setReportOpen(true)}
-            >
-              <Plus size={17} />
-              Report a drain
-            </button>
-            <button
-              className="icon-button mobile-toggle"
-              onClick={() => setMobileNav(!mobileNav)}
-              aria-label="Toggle navigation"
-              aria-expanded={mobileNav}
-            >
-              {mobileNav ? <X /> : <Menu />}
-            </button>
-          </div>
-        </div>
-      </header>
+      <ClearflowIntro onReport={() => setReportOpen(true)} />
       <main>
-        <section className="hero">
-          <div className="hero-content">
-            <div className="eyebrow">
-              <span className="pulse-dot" />
-              CHAPEL HILL, NORTH CAROLINA
-            </div>
-            <h1>
-              Small observations.
-              <br />
-              <span>Healthier waterways.</span>
-            </h1>
-            <p>
-              See the blockage. Prevent the backup.
-              <br />
-              Help your community turn drainage concerns into a clearer picture
-              of what needs attention.
-            </p>
-            <div className="hero-actions">
-              <button
-                className="button primary"
-                onClick={() => setReportOpen(true)}
-              >
-                <Plus size={17} />
-                Share an observation
-              </button>
-              <a className="button hero-link" href="#dashboard">
-                Explore the map <ArrowDown size={17} />
-              </a>
-            </div>
-            <div className="hero-note">
-              <ShieldCheck size={15} />
-              Community reporting. Human review. Safer participation.
-            </div>
-          </div>
-          <div className="hero-art">
-            <Waterscape />
-            <div className="glass-bubble">
-              <span>
-                <Leaf size={22} />
-              </span>
-              <div>
-                <strong>Every observation adds clarity.</strong>
-                <small>Connected communities. Connected waterways.</small>
-              </div>
-            </div>
-            <div className="art-label">
-              <Waves size={15} />A little care, downstream.
-            </div>
-          </div>
-        </section>
-        <div className="main-shell">
+        <div className="main-shell clearflow-live">
           <section
             className="weather-strip"
             aria-label="Official weather context"
@@ -595,63 +430,6 @@ export default function App() {
               </div>
             </div>
           </section>
-          <section className="community-section" id="community">
-            <div className="community-intro">
-              <span className="eyebrow">
-                FROM A MOMENT TO A MEANINGFUL REPORT
-              </span>
-              <h2>
-                Notice it. Share it.
-                <br /> Keep the picture clear.
-              </h2>
-              <p>
-                A leaf-covered grate or lingering puddle can be easy to
-                overlook. Your observation helps neighbors understand what is
-                happening and where follow-up is needed.
-              </p>
-              <a
-                href={official}
-                target="_blank"
-                rel="noreferrer"
-                className="text-link"
-              >
-                Connect with Town reporting resources <ArrowUpRight size={16} />
-              </a>
-            </div>
-            <div className="process-cards">
-              {[
-                {
-                  n: "01",
-                  icon: Eye,
-                  title: "Observe safely",
-                  text: "Take a photo or note what you see from a safe place. Stay out of roads and floodwater.",
-                },
-                {
-                  n: "02",
-                  icon: MapPin,
-                  title: "Pin & confirm",
-                  text: "Add the location and review nearby reports. Gemini can help describe photo evidence.",
-                },
-                {
-                  n: "03",
-                  icon: MessageCircle,
-                  title: "Build the picture",
-                  text: "Contribute to an existing incident or create one. Add follow-up evidence when things change.",
-                },
-              ].map(({ n, icon: Icon, title, text }) => (
-                <article key={n}>
-                  <div>
-                    <span className="process-icon">
-                      <Icon size={22} />
-                    </span>
-                    <small>{n}</small>
-                  </div>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
-                </article>
-              ))}
-            </div>
-          </section>
           <section id="impact" className="impact-section">
             <div className="section-heading">
               <div>
@@ -797,54 +575,10 @@ export default function App() {
             </div>
             <ActivityTrend stats={stats} />
           </section>
-          <section className="participation-banner">
-            <span className="banner-icon">
-              <Droplets size={33} />
-            </span>
-            <div>
-              <h2>A little attention goes a long way.</h2>
-              <p>Make your next observation part of the community picture.</p>
-            </div>
-            <button
-              className="button primary"
-              onClick={() => setReportOpen(true)}
-            >
-              Report a drain <ArrowRight size={17} />
-            </button>
-          </section>
         </div>
       </main>
-      <footer>
-        <div className="footer-main">
-          <a className="brand" href="/">
-            <span className="brand-mark">
-              <Droplets size={23} />
-            </span>
-            <span>
-              Drain<span className="brand-accent">Dispatch</span>
-              <small>SEE THE BLOCKAGE. PREVENT THE BACKUP.</small>
-            </span>
-          </a>
-          <p>
-            A HackNC 2026 community prototype.
-            <br />
-            Independent of the Town of Chapel Hill.
-          </p>
-          <a href={official} target="_blank" rel="noreferrer">
-            Official stormwater resources <ArrowUpRight size={14} />
-          </a>
-        </div>
-        <div className="footer-bottom">
-          <span>
-            <ShieldCheck size={14} />
-            Observe safely. Never enter drains, floodwater, or active roadways.
-          </span>
-          <span>
-            Community reports do not automatically notify the Town. Not an
-            emergency service.
-          </span>
-        </div>
-      </footer>
+      <ClearflowCommunity onReport={() => setReportOpen(true)} />
+      <ClearflowFooter />
       {(reportOpen || activeDraft) && (
         <ReportForm
           draftToken={activeDraft}
@@ -859,6 +593,6 @@ export default function App() {
           onChanged={() => void refresh()}
         />
       )}
-    </>
+    </div>
   );
 }

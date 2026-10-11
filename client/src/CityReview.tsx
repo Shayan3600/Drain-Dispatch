@@ -95,7 +95,7 @@ export default function CityReview() {
   }
   return <main className="city-review">
     <header className="cr-header">
-      <div><a href="/" className="cr-brand">DrainDispatch</a><span className="cr-eyebrow">CITY REVIEW · PUBLIC PROTOTYPE</span><h1>From reports to a clearer picture.</h1><p>Review community evidence in one place. Read-only; independent of the Town of Chapel Hill.</p></div>
+      <div><a href="/" className="cr-brand">Clearflow</a><span className="cr-eyebrow">CITY REVIEW · PUBLIC PROTOTYPE</span><h1>From reports to a clearer picture.</h1><p>Review community evidence in one place. Read-only; independent of the Town of Chapel Hill.</p></div>
       <a href="/" className="cr-button">Community dashboard</a>
     </header>
     <section className="cr-source" aria-label="Data source">

@@ -34,6 +34,7 @@ test("persistent PostgreSQL API: reports, retries, matching, observations, moder
     }
     const safeHealth = await request(app).get('/api/health');
     assert.ok(safeHealth.headers.ratelimit);
+    assert.equal(safeHealth.headers['referrer-policy'], 'strict-origin-when-cross-origin');
     assert.match(safeHealth.headers['content-security-policy'], /img-src[^;]*https:/);
     assert.equal((await request(app).post('/api/incidents').send({description:'x'.repeat(70_000)})).status,413);
     assert.equal(

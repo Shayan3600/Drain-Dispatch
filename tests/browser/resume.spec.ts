@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("confirmed RESUME shows the saved demo report without posting confirmation again", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

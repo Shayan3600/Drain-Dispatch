@@ -267,7 +267,7 @@ export default function ReportForm({
             REPORT REFERENCE <strong>{result.id}</strong>
           </div>
           <p className="muted">
-            DrainDispatch review is separate from municipal action. You can also
+            Clearflow review is separate from municipal action. You can also
             send this information to the Town.
           </p>
           <a

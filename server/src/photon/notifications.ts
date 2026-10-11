@@ -42,12 +42,12 @@ export async function enqueueStatusFollowups(
   const label = (
     {
       pending_review: "pending community review",
-      under_review: "under review by a DrainDispatch moderator",
+      under_review: "under review by a Clearflow moderator",
       closed: "closed with follow-up evidence",
     } as Record<string, string>
   )[status];
   if (!label) throw new Error("Unsupported follow-up status");
-  const responseText = `DrainDispatch update for incident ${incidentId}: ${label}. This is a community review status, not confirmation of municipal action or a repair. Review the incident on the dashboard for supporting evidence. Send STOP to withdraw follow-up consent.`;
+  const responseText = `Clearflow update for incident ${incidentId}: ${label}. This is a community review status, not confirmation of municipal action or a repair. Review the incident on the dashboard for supporting evidence. Send STOP to withdraw follow-up consent.`;
   const subscribers = await c.query(
     `SELECT s.sender_hash,s.chat_id FROM incident_subscriptions s
     JOIN messaging_preferences p ON p.sender_hash=s.sender_hash
