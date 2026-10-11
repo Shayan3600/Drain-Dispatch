@@ -6,18 +6,20 @@
 - [x] Publish safe source on development/live-integrations with PR #1; verify push and pull-request CI.
 - [x] Update the existing team Notion plan with verified milestones, current workflow, setup/security guidance and clearly pending GIS/deployment/demo work.
 - [x] Read back the Notion changes and verify existing team planning content is preserved.
-- [ ] Publish final safe verification documentation after repeat secret scans.
+- [x] Publish final safe verification documentation after repeat secret scans; commit 5b87b3d and its Docker runtime CI passed.
 
 Plan checkpoint: update the supplied Notion page in place, retaining team assignments and research. Distinguish verified real services from simulated duplicate contributors and planned public GIS. Never transfer credential files, private confirmation links or private user evidence to Notion.
 
 ## Production readiness and release
 
 - [x] Inspect available production host configuration and authentication without exposing values; Railway is available but not connected.
-- [ ] Re-run meaningful release checks; verify production safety, migrations, public data labeling and persistent worker deployment requirements.
+- [x] Re-run meaningful release checks; verify production safety, migrations, public data labeling and persistent worker deployment requirements.
 - [ ] Deploy to the authorized production target when available, using dedicated secret configuration and safe source only.
 - [ ] Verify deployed health, report/photo persistence, dashboard and worker operation; record actual release status in the team handoff.
 
 Release checkpoint: the owner authorized production deployment when ready. A durable host and its authenticated account are required; an expired temporary tunnel is not production. Preserve database records, avoid destructive migrations and do not transfer private files.
+
+Release re-plan: Railway is connected to the owner's existing desirable-emotion production project; CLI authorization is complete. Its automatic monorepo services had no credentials and used development commands. Reuse the API service for built website/API and the other service for the persistent worker; preserve both services and all database records. New Railway services reject deprecated config-file settings, so use reviewed staged service configuration instead of assigning the legacy TOML paths. Transfer individual existing values only through dedicated variable stdin settings, suppressing diagnostics and never uploading .env files. PR #2 city-review is imported with original signed history; fix marker/demo labeling and verify the integrated routes before publication/merge/deployment.
 
 ## Next milestones after real iPhone text test
 
@@ -146,4 +148,4 @@ Additional feature implemented and tested: consent-driven status notifications v
 
 Final extension checks: 43 backend tests and seven browser flows pass; typecheck and production builds pass; dependency audit reports zero vulnerabilities. Actual Tiger Data UTC activity queries and live NWS availability/coverage/timestamps pass. Legacy is_demo=true default was corrected without changing existing incident rows. Actual secure RESUME delivery and external restored-page checks pass, preserving saved evidence and confirmed records. The saved-report return path now enables demo visibility, clears hiding filters and focuses its marker without another POST; separate demo-preview counts explain zero real metrics. The owner confirmed this fix and both map records. The temporary tunnel and worker are stopped and original local URL settings restored.
 
-Production review: role-specific startup validation rejects incomplete sponsor/public URL configuration before database/provider calls; protected-route secrets must be independent. A worker-specific Railway config omits the API's HTTP health check and uses compiled JavaScript. The suite now has 49 passing backend tests. Docker build/runtime checks are added to CI because no local Docker CLI is available. A Railway connection is requested; no durable deployment is claimed.
+Production review: role-specific startup validation rejects incomplete sponsor/public URL configuration before database/provider calls; protected-route secrets must be independent. The worker's Railway service settings omit the API's HTTP health check and use compiled JavaScript. The suite has 49 passing backend tests and ten browser flows, including city-review coverage. Docker build/runtime CI passed against 5b87b3d. Railway is connected and individually scoped secrets are configured through CLI stdin; no .env file was uploaded. Staged service changes are reviewed and non-destructive. A deployment is not claimed until hosted acceptance succeeds.

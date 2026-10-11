@@ -63,7 +63,7 @@ export function createApp(db: Database) {
   }));
   const origins = (process.env.CLIENT_ORIGIN || "http://localhost:5173").split(
     ",",
-  );
+  ).map(origin => origin.trim());
   app.use(
     cors({
       origin: (origin, cb) => cb(null, !origin || origins.includes(origin)),

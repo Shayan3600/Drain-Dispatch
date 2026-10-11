@@ -17,6 +17,18 @@ test("persistent PostgreSQL API: reports, retries, matching, observations, moder
   let db = await openDatabase(path.join(dir, "db"));
   let app = createApp(db);
   try {
+    const originalOrigins = process.env.CLIENT_ORIGIN;
+    process.env.CLIENT_ORIGIN = "https://first.example.invalid, https://second.example.invalid";
+    const originApp = createApp(db);
+    try {
+      const allowed = await request(originApp).get("/api/health").set("Origin", "https://second.example.invalid");
+      assert.equal(allowed.headers["access-control-allow-origin"], "https://second.example.invalid");
+      const denied = await request(originApp).get("/api/health").set("Origin", "https://unapproved.example.invalid");
+      assert.equal(denied.headers["access-control-allow-origin"], undefined);
+    } finally {
+      if (originalOrigins === undefined) delete process.env.CLIENT_ORIGIN;
+      else process.env.CLIENT_ORIGIN = originalOrigins;
+    }
     for (const privatePath of ['/.env', '/server/.env', '/client/.env', '/.env.production', '/tiger-cloud-drain_dispatch-credentials.env', '/.git/config', '/%2eenv', '/@fs/private']) {
       assert.equal((await request(app).get(privatePath)).status, 404);
     }

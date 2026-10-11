@@ -50,6 +50,8 @@
 - [ ] Photo retention/cleanup policy, broader image evaluation and accessibility review.
 - [ ] Timed rehearsal, recorded safe backup, final Devpost fields, actual sponsor eligibility/deadline confirmation and optional domain.
 ### Documentation for reviewers and demo operators
+- **City-review feature (PR #2):** `/city` provides read-only report filtering, map/evidence/history review and a visible report packet preview. Explicit sample mode is synthetic; live labeled tests are called DEMO / TEST. Packet copy excludes private fields and photo links by default, with manual copy fallback. It never submits to the Town or changes report status. The original seven teammate files and signed commits are preserved; selected-marker duplication and evidence labeling were corrected. Three isolated browser tests cover the feature.
+- **Production preparation:** Railway is now connected and locally authorized; individual credentials were set through dedicated secret-variable stdin without transferring .env files. Reviewed staged configuration uses one built website/API service and one persistent worker, preserving the owner's existing services. Deprecated TOML configuration was removed after the platform rejected assigning it. Deployment and hosted acceptance are still pending; the integrated release has 49 backend tests and ten browser flows.
 - [Verification evidence](https://github.com/Shayan3600/Drain-Dispatch/blob/development/live-integrations/docs/verification-evidence.md)
 - [Integration contracts and limits](https://github.com/Shayan3600/Drain-Dispatch/blob/development/live-integrations/docs/integration-status.md)
 - [Licensed image validation](https://github.com/Shayan3600/Drain-Dispatch/blob/development/live-integrations/docs/photo-validation.md)
