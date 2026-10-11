@@ -67,3 +67,37 @@ test("hidden tabs pause polling and visible tabs catch up",async({page})=>{
   await page.evaluate(()=>{(window as unknown as {testHidden:boolean}).testHidden=false;document.dispatchEvent(new Event("visibilitychange"));});
   await expect.poll(()=>reads).toBeGreaterThan(before);
 });
+
+test("failed evidence stays marked stale during a delayed retry until fresh detail arrives",async({page})=>{
+  let phase:"good"|"failed"|"delayed"="good";
+  let releaseDetail:(()=>Promise<void>)|undefined;
+  await page.route("**/api/**",async route=>{
+    const pathname=new URL(route.request().url()).pathname;
+    if(pathname==="/api/incidents")return route.fulfill({json:[report]});
+    // History resolves before the held detail request: it cannot certify freshness.
+    if(pathname.endsWith("/history"))return route.fulfill({json:[]});
+    if(phase==="failed")return route.fulfill({status:503,json:{error:{message:"Synthetic evidence failure"}}});
+    const detail={...report,observations:[{id:"obs",description:phase==="good"?"Previously loaded evidence":"Fresh replacement evidence",source:"web",createdAt:report.createdAt}]};
+    if(phase==="delayed") { releaseDetail=()=>route.fulfill({json:detail}); return; }
+    return route.fulfill({json:detail});
+  });
+  await page.goto("/city");
+  await page.locator(".cr-card").click();
+  await expect(page.getByText("Previously loaded evidence",{exact:true})).toBeVisible();
+  const preview=page.getByRole("textbox",{name:"Report packet preview"});
+  phase="failed";
+  await page.getByRole("button",{name:"Refresh",exact:true}).click();
+  await expect(page.getByRole("alert")).toContainText("Synthetic evidence failure");
+  await expect(preview).toHaveValue(/STALE SNAPSHOT/);
+  phase="delayed";
+  await page.getByRole("button",{name:"Retry evidence",exact:true}).click();
+  await expect.poll(()=>Boolean(releaseDetail)).toBe(true);
+  await expect(page.getByText("Loading community history…",{exact:true})).toHaveCount(0);
+  await expect(page.getByText("Previously loaded evidence",{exact:true})).toBeVisible();
+  await expect(preview).toHaveValue(/STALE SNAPSHOT/);
+  await expect(page.locator(".cr-evidence")).toContainText(" · STALE");
+  await expect(page.getByRole("button",{name:"Copy report",exact:true})).toBeEnabled();
+  await releaseDetail!();
+  await expect(page.getByText("Fresh replacement evidence",{exact:true})).toBeVisible();
+  await expect(preview).not.toHaveValue(/STALE SNAPSHOT/);
+});
