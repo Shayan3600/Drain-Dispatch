@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import DrainMap from "./DrainMap";
+import PacketPreview from "./PacketPreview";
 import { api } from "./api";
 import { createCityReviewData } from "./cityReviewData";
 import { categories, statuses, type Incident, type IncidentEvent } from "./types";
@@ -46,6 +47,7 @@ export default function CityReview() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
   const [historyError, setHistoryError] = useState("");
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -71,13 +73,15 @@ export default function CityReview() {
     const controller = new AbortController();
     setDetail(undefined); setHistory([]); setDetailKey(selectionKey);
     setDetailLoading(true); setDetailError(""); setHistoryError("");
+    setHistoryLoading(true);
     void data.getIncident(selectedId, controller.signal)
       .then(item => { if (!controller.signal.aborted) setDetail(item); })
       .catch(reason => { if (!controller.signal.aborted) setDetailError(reason instanceof Error ? reason.message : "Evidence could not be loaded."); })
       .finally(() => { if (!controller.signal.aborted) setDetailLoading(false); });
     void data.getHistory(selectedId, controller.signal)
       .then(items => { if (!controller.signal.aborted) setHistory(items); })
-      .catch(() => { if (!controller.signal.aborted) setHistoryError("History is unavailable. The report evidence can still be reviewed."); });
+      .catch(() => { if (!controller.signal.aborted) setHistoryError("History is unavailable. The report evidence can still be reviewed."); })
+      .finally(() => { if (!controller.signal.aborted) setHistoryLoading(false); });
     return () => controller.abort();
   }, [data, selectedId, selectionKey]);
 
@@ -136,7 +140,9 @@ export default function CityReview() {
                 {observation.assessment && <div className="cr-assessment"><strong>{mode === "fixtures" ? "Synthetic AI example" : "AI suggestion — not a verified diagnosis"}</strong><p>Suggested category: {categories[observation.assessment.suggestedCategory]}</p><p>{observation.assessment.visibleEvidence}</p><small>Uncertainty: {observation.assessment.uncertainty} · {observation.assessment.humanReviewRecommended ? "Human review recommended" : "Human confirmation still required"}</small></div>}
               </article>)}
               <h3>Community history</h3>
+              {historyLoading && <p role="status">Loading community history…</p>}
               {historyError ? <p role="status">{historyError}</p> : <ul className="cr-history">{history.map((event, index) => <li key={event.id ?? index}><strong>{eventNames[event.eventType] ?? event.eventType.replaceAll("_", " ")}</strong><small>{timestamp(event.createdAt ?? event.timestamp)} · {event.source ?? "Source unavailable"}</small></li>)}</ul>}
+              <PacketPreview key={selectionKey} incident={currentDetail} history={history} historyState={historyLoading ? "loading" : historyError ? "unavailable" : "ready"} />
             </>}
           </>}
         </section>
