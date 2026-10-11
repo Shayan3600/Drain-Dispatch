@@ -159,6 +159,7 @@ export function createApp(db: Database) {
         issueType: issueType.optional(),
         status: z.enum(["pending_review", "under_review", "closed"]).optional(),
         demo: z.enum(["true", "false"]).optional(),
+        sort: z.enum(["created", "updated"]).optional(),
       })
       .parse(req.query);
     res.json(

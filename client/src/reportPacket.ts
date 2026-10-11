@@ -2,6 +2,7 @@ import { categories, statuses, type Incident, type IncidentEvent } from "./types
 
 export const officialReportingUrl = "https://www.chapelhillnc.gov/Town-Government/Departments-and-Offices/Public-Works/Stormwater-Management/Flooding-and-Drainage";
 export interface PacketOptions {
+  evidenceStale?: boolean;
   includePhotoLinks?: boolean;
   photoBaseUrl?: string;
   historyState?: "ready" | "loading" | "unavailable";
@@ -26,6 +27,7 @@ function publicPhotoLink(value: string | undefined, base?: string) {
 export function formatReportPacket(incident: Incident, history: IncidentEvent[] = [], options: PacketOptions = {}): string {
   const lines = [
     "DrainDispatch — community evidence packet",
+    ...(options.evidenceStale ? ["STALE SNAPSHOT — a refresh failed; verify current evidence before using this packet."] : []),
     ...(incident.isDemo ? ["DEMO / TEST REPORT — excluded from real community metrics"] : []),
     `Reference: ${incident.id}`,
     `Reported category: ${categories[incident.issueType]}`,

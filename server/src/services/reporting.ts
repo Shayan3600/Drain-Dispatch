@@ -47,6 +47,8 @@ export function incident(r: Row) {
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     observationCount: Number(r.observation_count || 0),
+    ...(r.has_photo !== undefined ? { hasPhoto: Boolean(r.has_photo) } : {}),
+    ...(r.latest_observation_at ? { latestObservationAt: r.latest_observation_at } : {}),
   };
 }
 export function distanceMeters(
@@ -68,10 +70,15 @@ const hash = (value: string) =>
 export class Reporting {
   constructor(public db: Database) {}
   async list(
-    filters: { issueType?: string; status?: string; demo?: boolean } = {},
+    filters: { issueType?: string; status?: string; demo?: boolean; sort?: "created" | "updated" } = {},
   ) {
     const rows = await this.db.query(
-      `SELECT i.*,count(o.id)::int observation_count FROM incidents i LEFT JOIN observations o ON o.incident_id=i.id WHERE ($1::text IS NULL OR i.issue_type=$1) AND ($2::text IS NULL OR i.status=$2 OR ($2='pending_review' AND i.status='pending')) AND ($3::boolean IS NULL OR i.is_demo=$3) GROUP BY i.id ORDER BY i.created_at DESC LIMIT 500`,
+      `SELECT i.*,count(o.id)::int observation_count,
+       COALESCE(bool_or(o.photo_id IS NOT NULL OR NULLIF(to_jsonb(o)->>'photo_url','') IS NOT NULL),false) has_photo,
+       max(o.created_at) latest_observation_at
+       FROM incidents i LEFT JOIN observations o ON o.incident_id=i.id
+       WHERE ($1::text IS NULL OR i.issue_type=$1) AND ($2::text IS NULL OR i.status=$2 OR ($2='pending_review' AND i.status='pending')) AND ($3::boolean IS NULL OR i.is_demo=$3)
+       GROUP BY i.id ORDER BY ${filters.sort === "updated" ? "i.updated_at" : "i.created_at"} DESC,i.id LIMIT 500`,
       [filters.issueType ?? null, filters.status ?? null, filters.demo ?? null],
     );
     return rows.rows.map(incident);

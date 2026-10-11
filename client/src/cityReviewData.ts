@@ -34,6 +34,8 @@ export function createCityReviewData(options: Options): CityReviewData {
       mode: "live", label: "Connected reporting API",
       async listIncidents(filters = {}, signal) {
         const query = new URLSearchParams();
+        // Only City Review requests update-first ordering; resident defaults stay unchanged.
+        query.set("sort", "updated");
         if (filters.issueType) query.set("issueType", filters.issueType);
         if (filters.status) query.set("status", filters.status);
         if (filters.demo !== undefined) query.set("demo", String(filters.demo));
@@ -50,7 +52,11 @@ export function createCityReviewData(options: Options): CityReviewData {
     };
   }
   // Clone and force labels even for caller-supplied fixtures. No network writes.
-  const incidents = structuredClone(options.incidents ?? cityReviewFixtures).map(item => ({ ...item, isDemo: true }));
+  const incidents = structuredClone(options.incidents ?? cityReviewFixtures).map(item => ({
+    ...item, isDemo: true,
+    hasPhoto: item.observations?.some(observation => Boolean(observation.photoUrl)) ?? item.hasPhoto,
+    latestObservationAt: item.observations?.map(observation => observation.createdAt).sort().at(-1) ?? item.latestObservationAt,
+  }));
   function find(id: string, signal?: AbortSignal) {
     abortIfNeeded(signal);
     const item = incidents.find(incident => incident.id === id);

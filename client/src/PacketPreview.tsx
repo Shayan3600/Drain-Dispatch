@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Incident, IncidentEvent } from "./types";
 import { formatReportPacket, officialReportingUrl, type PacketOptions } from "./reportPacket";
 
-export default function PacketPreview({ incident, history, historyState }: {
+export default function PacketPreview({ incident, history, historyState, evidenceStale = false }: {
   incident: Incident;
   history: IncidentEvent[];
   historyState: PacketOptions["historyState"];
+  evidenceStale?: boolean;
 }) {
   const [includePhotoLinks, setIncludePhotoLinks] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
@@ -13,8 +14,8 @@ export default function PacketPreview({ incident, history, historyState }: {
   const copyGeneration = useRef(0);
   const apiOrigin = (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_URL;
   const packet = useMemo(() => formatReportPacket(incident, history, {
-    includePhotoLinks, historyState, photoBaseUrl: apiOrigin || window.location.origin,
-  }), [incident, history, includePhotoLinks, historyState, apiOrigin]);
+    includePhotoLinks, historyState, evidenceStale, photoBaseUrl: apiOrigin || window.location.origin,
+  }), [incident, history, includePhotoLinks, historyState, evidenceStale, apiOrigin]);
   useEffect(() => {
     copyGeneration.current += 1;
     setCopyStatus("");
