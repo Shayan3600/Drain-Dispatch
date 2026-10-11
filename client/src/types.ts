@@ -30,6 +30,8 @@ export interface Incident {
   createdAt: string;
   updatedAt: string;
   observationCount: number;
+  hasPhoto?: boolean;
+  latestObservationAt?: string;
   distanceMeters?: number;
   observations?: Observation[];
   photos?: { id: string; url: string }[];
