@@ -24,7 +24,7 @@ CREATE INDEX IF NOT EXISTS events_incident ON incident_events(incident_id,occurr
 CREATE TABLE IF NOT EXISTS report_drafts (
  id uuid PRIMARY KEY, token_hash text UNIQUE NOT NULL, source text NOT NULL, description text NOT NULL,
  issue_type text NOT NULL, photo_id uuid REFERENCES photos(id), source_message_id text UNIQUE,
- expires_at timestamptz NOT NULL, confirmed_incident_id uuid REFERENCES incidents(id), created_at timestamptz NOT NULL DEFAULT now()
+ expires_at timestamptz NOT NULL, confirmed_incident_id uuid REFERENCES incidents(id), created_at timestamptz NOT NULL DEFAULT now(), is_demo boolean NOT NULL DEFAULT false
 );
 CREATE TABLE IF NOT EXISTS request_receipts (
  request_key text PRIMARY KEY, payload_hash text NOT NULL, result jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now()

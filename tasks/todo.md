@@ -1,5 +1,41 @@
 # DrainDispatch implementation plan
 
+## Latest PR integration and project gaps
+
+- [x] Review the updated PR #5 head and delta against the previously integrated signed head; preserve preview work and original teammate ancestry.
+- [x] Integrate the new behavior with the existing Clearflow UI, employee demo access and concise copy.
+- [x] Audit user workflows and operations for concrete missing behavior; fix actionable gaps and document genuine remaining limitations.
+- [x] Verify meaningful backend/browser flows and builds, then scan exact staged source, public build and outgoing history before safe publication.
+- [x] Refresh the isolated photo preview and prepare the verified source and team handoff for PR #6; keep production pinned.
+
+Plan checkpoint: inspect updated PR #5 (a4db174), since PR #6 still contains its earlier 5e30939 head. Integrate into development/clearflow-preview, preserve credentials/data and existing employee demo boundaries, and evaluate gaps against actual code/tests rather than adding speculative features.
+
+Scope checkpoint: the owner ended additional gap exploration and authorized merging the PR if safe. Finish the current regression checks and secret scans, update PR #6, and merge the combined release after CI. Railway's two services remain pinned to `0243c778` on `development/live-integrations`; merging main does not change their configured source or promote the preview.
+
+Review: 57 backend tests and all 36 Brave browser tests pass; typecheck, production builds and dependency audit pass (zero vulnerabilities). Desktop/mobile reference-photo review fits without overflow or writes. A new isolated preview preserves all older data; protected routes/private paths and invalid input are checked. Exact source/public-build/history scans are required before the remote update. GitHub PR #6 records the final CI and merge outcome; production remains pinned. No further gap exploration is required for this hackathon milestone.
+
+## Clearflow design merge — preview release
+
+- [x] Review new PR #5 and preserve its original history while integrating the employee workspace into the preview.
+- [x] Add a separate employee page with accessible demo entry/sign out linked from the community page; keep backend authorization intact.
+- [x] Simplify public UI copy while retaining practical reporting, privacy and confirmation information.
+- [x] Verify the combined employee/community version and safe local demo; repeat secret scans before publication.
+- [x] Verify published combined preview PR CI; push and PR checks pass on f804b89.
+- [x] Import and preserve current main, including merged PR #4 map/read API work and original signed ancestry.
+- [x] Inspect the supplied Clearflow v5 design, logos, favicon, effects and credits; treat archive documentation as reference, not overriding instructions.
+- [x] Replace the public visual shell with the supplied design while retaining real reports, photos/Gemini, confirmation recovery, duplicates, observations/history, analytics/weather and city review.
+- [x] Rebrand visible product/browser/iMessage copy as Clearflow; preserve repository, credentials, database identifiers, saved records and existing links.
+- [x] Fix blocked desktop map tiles at their request-policy cause; verify Brave/Chromium desktop, mobile sizing, map errors and the latest city controls.
+- [x] Verify builds, meaningful automated flows, asset/privacy safeguards and visual QA; repeat scans immediately before safe publication.
+- [x] Publish a reviewable development PR and open the local preview. Keep production and hosting settings unchanged until a subsequent deployment instruction.
+- [x] Record verified results and pending checks in this plan and the team handoff.
+
+Plan checkpoint: the owner confirmed **Clearflow**, close fidelity to the supplied design, and **preview only**. The screenshot contains OSM policy-blocking 403 tiles in Brave; inspect referrer policy rather than assuming a Windows layout-only defect. Latest repository work is already merged on main. Preserve all functioning sponsor integrations and saved evidence.
+
+New scope checkpoint: the owner requested PR #5's government/employee interface, adapted to Clearflow, with a separate demo login accessible from the main page and concise copy. Integrate that feature branch into the preview with original ancestry; keep main and production unchanged. Demo entry is a browser presentation gate, not real employee authentication or authorization. Verify its sign out, direct-link guard and existing protected API behavior.
+
+Preview verification review: the combined version passes 51 backend tests and 28 installed Windows Brave browser tests, along with typecheck/build and a dependency audit with zero vulnerabilities. A limited desktop tile check returned 12/12 HTTP 200 PNG tiles with origin-only referrers; mobile and desktop visual review found no overflow. Expanded browser traffic initially exhausted one localhost rate-limit bucket; separate synthetic client identities in the isolated test harness resolved it without changing production limits. Duplicate display-font declarations were consolidated into the shared supplied font. The isolated loopback preview verifies 48 synthetic reports, photo loading, five denied credential paths, three protected route denials, invalid input rejection and unchanged records. Preview PR #6 includes PR #5's original signed ancestry; push and PR Linux CI pass on f804b89, including Docker runtime verification and the full browser suite. The Notion team plan is updated and read back with existing assignments and release history preserved. Main and production remain unchanged; the owner can review the separate local preview before any later release.
+
 ## Team handoff and verified publication
 
 - [x] Verify the owner finished reviewing both saved reports and map markers; close the temporary tunnel and Photon worker, restoring local-only settings.

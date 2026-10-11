@@ -9,6 +9,9 @@ const directory = await mkdtemp(
 process.env.IMAGE_STORAGE = "local";
 process.env.LOCAL_UPLOAD_PATH = path.join(directory, "uploads");
 process.env.PUBLIC_API_URL = "http://localhost:3002";
+// This temporary local harness alone accepts the fixture's synthetic client IP.
+// No rate-limit exemption or increased limit is introduced into the application.
+process.env.TRUST_PROXY = "1";
 delete process.env.DATABASE_URL;
 delete process.env.GEMINI_API_KEY;
 process.env.WORKER_TOKEN = "isolated-browser-test-worker-secret";

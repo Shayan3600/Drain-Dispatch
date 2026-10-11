@@ -10,7 +10,7 @@ Incident: {id,latitude,longitude,description,issueType,status,isDemo,createdAt,u
 
 - GET /api/health: {ok,databaseMode,timeSeriesEnabled,capabilities:{gemini,photon,storage},prototype}. Configured capabilities do not prove live connectivity.
 - GET /api/incidents: array of up to 500 incidents; query issueType, status, demo=true|false. Optional `sort=created|updated` defaults to created; City Review uses updated. Summaries add `hasPhoto` (persisted canonical/legacy photo availability) and optional `latestObservationAt` (newest observation timestamp). These additive fields do not change existing submission counts.
-- GET /api/incidents/nearby?latitude=&longitude=&issueType=: same-category active candidates updated within 30 days and within 30m, with distanceMeters. Never merges automatically.
+- GET /api/incidents/nearby?latitude=&longitude=&issueType=: real same-category active candidates updated within 30 days and within 30m, with distanceMeters. `demo=true` requests labeled demo candidates instead. Confirmation rejects a match with a different real/demo classification from the saved draft. Never merges automatically.
 - GET /api/incidents/:id: incident plus observations.
 - POST /api/incidents: {description,issueType,latitude,longitude,locationConfirmed:true,photoId?,idempotencyKey} → 201 incident. Description 5–2000 characters; idempotencyKey 8–150 characters. Identical retry returns original incident; changed payload with same key returns 409.
 - POST /api/incidents/:id/observations: {description,photoId?,sameLocationConfirmed:true,idempotencyKey} → 201 {id,incidentId}. Identical retry does not add evidence twice.

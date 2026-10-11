@@ -1,5 +1,13 @@
 # Engineering lessons
 
+- When the owner says the hackathon gap review is sufficient, stop expanding scope. Finish existing fixes, verification and the authorized PR merge; record deferred operational work briefly without turning it into a release blocker.
+
+- Use short, concrete product copy: report, location, photo, history, saved. Preserve essential confirmation and privacy information; avoid vague marketing slogans when the owner asks for concise language.
+- A demonstrative employee login must say it is a demo, collect no real account credentials, and leave protected backend authorization unchanged.
+- A preview-only instruction overrides earlier production deployment authorization for that release. Preserve the live deployment, public URLs and worker while preparing the new design for review.
+- Diagnose map failures from actual response evidence. OSM 403 policy tiles are different from map-container sizing failures; verify both page and server referrer policies in the reported browser. Cross-origin map requests may send the origin, never private confirmation paths or tokens.
+- Import current teammate work before replacing a visual shell, and preserve real reporting and data contracts when a supplied design contains a static download-only mock form.
+
 - Keep a temporary live-testing tunnel open until the owner has finished inspecting the dashboard, or the announced safety deadline expires. Backend proof alone does not establish that the human testing session is complete. Explain closure clearly and provide a secure sender-scoped RESUME path when temporary URLs change; never expose confirmation tokens in chat.
 - Opening an already confirmed message draft must display its saved incident and location, not ask for confirmation again. Carry the returned incident into dashboard filters, demo visibility and map focus. Label real-only metrics clearly beside demo preview counts, and verify the complete phone-to-dashboard return path.
 

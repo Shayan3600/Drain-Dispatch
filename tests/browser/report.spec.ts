@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import sharp from "sharp";
 test("browser creates a report, reloads it, and adds follow-up evidence", async ({
   page,
@@ -24,7 +24,7 @@ test("browser creates a report, reloads it, and adds follow-up evidence", async 
     .getByRole("button", { name: "Submit observation", exact: true })
     .click();
   await expect(
-    page.getByText("A clearer picture, thanks to you."),
+    page.getByRole("heading", { name: "Report saved.", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Back to the dashboard", exact: true })
@@ -117,7 +117,7 @@ test("nearby duplicate choice adds an observation to the same incident", async (
     .getByRole("button", { name: "Submit observation", exact: true })
     .click();
   await expect(
-    page.getByText("A clearer picture, thanks to you."),
+    page.getByRole("heading", { name: "Report saved.", exact: true }),
   ).toBeVisible();
   const after = await (
     await request.get("http://localhost:3002/api/stats")
@@ -136,6 +136,7 @@ test("simulated message draft confirms in the browser and replay does not duplic
       data: {
         id: "browser-message-event",
         senderId: "private-test-sender",
+        chatId: "synthetic-private-browser-chat",
         text: "REPORT Browser messaging test: water visibly pools beside a walkway.",
       },
     },
@@ -156,7 +157,7 @@ test("simulated message draft confirms in the browser and replay does not duplic
     .getByRole("button", { name: "Submit observation", exact: true })
     .click();
   await expect(
-    page.getByText("A clearer picture, thanks to you."),
+    page.getByRole("heading", { name: "Report saved.", exact: true }),
   ).toBeVisible();
   const incidents = await (
     await request.get("http://localhost:3002/api/incidents")
@@ -173,6 +174,7 @@ test("simulated message draft confirms in the browser and replay does not duplic
       data: {
         id: "browser-message-event",
         senderId: "private-test-sender",
+        chatId: "synthetic-private-browser-chat",
         text: "REPORT Browser messaging test: water visibly pools beside a walkway.",
       },
     },
@@ -227,7 +229,7 @@ test("uploaded photo persists and mocked AI suggestions can be corrected before 
     .getByRole("button", { name: "Submit observation", exact: true })
     .click();
   await expect(
-    page.getByText("A clearer picture, thanks to you."),
+    page.getByRole("heading", { name: "Report saved.", exact: true }),
   ).toBeVisible();
   const incidents = await (
     await request.get("http://localhost:3002/api/incidents")

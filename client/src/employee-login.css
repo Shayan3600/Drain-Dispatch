@@ -1,0 +1,51 @@
+.employee-login {
+  min-height: 100vh;
+  color: #153e48;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: radial-gradient(ellipse at 85% 12%, #abe4ef 0, transparent 40%), linear-gradient(155deg, #e1f5f7, #f3faed 72%, #e8f6ef);
+  padding: 24px max(24px, calc((100vw - 1200px) / 2));
+}
+.employee-login * { box-sizing: border-box; }
+.employee-login a { color: inherit; }
+.employee-login :is(a, button):focus-visible { outline: 3px solid #087da4; outline-offset: 5px; }
+.el-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 24px; border: 1px solid #ffffffed; border-radius: 22px; background: #ffffffab; box-shadow: inset 0 1px 2px #fff, 0 12px 30px #29787b0d; backdrop-filter: blur(16px); }
+.el-brand { display: inline-flex; align-items: center; gap: 12px; font-size: 27px; font-weight: 600; text-decoration: none; letter-spacing: -.8px; }
+.el-brand img { width: 38px; height: 38px; object-fit: contain; }
+.el-demo-label, .el-card-label { color: #336c65; font-size: 11px; font-weight: 750; letter-spacing: 1.3px; text-transform: uppercase; }
+.el-demo-label { padding: 8px 11px; border: 1px solid #bdd9cd; border-radius: 999px; background: #eff9e5; }
+.el-main { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: clamp(36px, 6vw, 80px); align-items: center; padding: clamp(56px, 10vh, 120px) 24px; }
+.el-eyebrow { display: flex; align-items: center; gap: 8px; color: #477178; font-size: 11px; letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase; }
+.el-intro h1 { margin: 24px 0 18px; font-size: clamp(36px, 4.2vw, 56px); line-height: 1.1; letter-spacing: -2px; font-weight: 600; }
+.el-lead { margin: 0 0 20px; color: #257554; font-size: clamp(23px, 2.2vw, 30px); line-height: 1.35; font-weight: 500; letter-spacing: -.6px; }
+.el-description { max-width: 440px; color: #4c7278; font-size: 15px; line-height: 1.8; }
+.el-capabilities { display: grid; gap: 14px; margin: 28px 0 36px; color: #396f6b; font-size: 13px; }
+.el-capabilities span, .el-return { display: flex; align-items: center; gap: 10px; }
+.el-return { width: fit-content; font-size: 13px; text-underline-offset: 4px; }
+.el-card { padding: clamp(26px, 3vw, 40px); border-radius: 28px; border: 1px solid #fff; background: linear-gradient(145deg, #fffffff0, #eaf6f0dc); box-shadow: inset 0 1px 2px #fff, 0 18px 55px #1b6b7419; backdrop-filter: blur(18px); }
+.el-card-icon { display: grid; place-items: center; width: 68px; height: 68px; margin-bottom: 24px; border: 1px solid #b7d9bd; border-radius: 20px; color: #558b35; background: linear-gradient(#f2fbdc, #dceecb); box-shadow: inset 0 1px 2px #fff; }
+.el-card h2 { margin: 12px 0 14px; font-size: 27px; line-height: 1.25; font-weight: 600; letter-spacing: -.7px; }
+.el-card p { color: #4c7174; font-size: 14px; line-height: 1.75; }
+.el-explanation { margin: 22px 0; padding: 16px 18px; border: 1px solid #c9dfd7; border-radius: 15px; background: #f5faf2b5; }
+.el-explanation strong { font-size: 13px; font-weight: 650; }
+.el-explanation p { margin: 7px 0 0; font-size: 12px; }
+.el-continue { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 50px; padding: 14px 18px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; color: #234410; border: 1px solid #79a94c; border-radius: 12px; background: linear-gradient(#d6f8a9, #94ce51); box-shadow: inset 0 1px 1px #fff9, 0 5px 12px #5085341a; }
+.el-continue:hover { background: linear-gradient(#e2fbbd, #a2d65f); }
+.el-card .el-session-note { margin: 16px 0 0; font-size: 11px; }
+.el-card .el-error { padding: 12px; color: #8b3826; border: 1px solid #e6c3b5; border-radius: 10px; background: #fff4ee; }
+.el-footer { border-top: 1px solid #bddbd4; padding: 20px 24px; color: #537577; font-size: 11px; line-height: 1.7; }
+@media (max-width: 800px) {
+  .employee-login { padding: 18px; }
+  .el-header { padding: 14px 18px; }
+  .el-main { grid-template-columns: 1fr; gap: 32px; padding: 44px 8px; }
+  .el-intro h1 { margin-top: 20px; }
+  .el-capabilities { margin: 22px 0; }
+  .el-footer { padding: 20px 8px; }
+}
+@media (max-width: 400px) {
+  .employee-login { padding: 12px; }
+  .el-header { gap: 10px; padding: 12px; }
+  .el-brand { gap: 7px; font-size: 22px; }
+  .el-brand img { width: 30px; height: 30px; }
+  .el-demo-label { padding: 7px; font-size: 9px; letter-spacing: .7px; }
+  .el-card { padding: 24px; }
+}

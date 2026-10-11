@@ -95,9 +95,15 @@ async function migrate(db: Database, postgres = false): Promise<boolean> {
   return db.transaction(async (connection) => {
     // Serialize migrations across API/worker starts without removing or replacing existing data.
     if (postgres) await connection.query("SELECT pg_advisory_xact_lock(172934, 1)");
+    const draftClassification = await connection.query("SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='report_drafts' AND column_name='is_demo'");
     for (const sql of migrations)
       for (const statement of sql.split(";").filter((s) => s.trim()))
         await connection.query(statement);
+    if (!draftClassification.rows.length) {
+      // Only the first legacy upgrade infers the old, explicit REPORT DEMO marker.
+      // Subsequent starts preserve stored classification, including edited prose.
+      await connection.query("UPDATE report_drafts SET is_demo=true WHERE confirmed_incident_id IS NULL AND description ~* '^DEMO([[:space:]]|:|$)'");
+    }
     const legacy = await connection.query("SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='observations' AND column_name='source_event_id'");
     if (legacy.rows.length)
       await connection.query("UPDATE observations SET source_message_id=source_event_id WHERE source_message_id IS NULL AND source_event_id IS NOT NULL");

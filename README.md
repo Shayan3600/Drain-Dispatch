@@ -1,10 +1,10 @@
-# DrainDispatch
+# Clearflow
 
-**See the blockage. Prevent the backup.**
+Report drainage problems with photos and a confirmed location.
 
 A HackNC 2026 community stormwater reporting prototype. Turn visible drainage concerns into geolocated incidents with photo evidence, community observations, human review and follow-up history. Independent of the Town of Chapel Hill; reports do not automatically notify the Town or guarantee flood prevention.
 
-[Live dashboard](https://draindispatchserver-production.up.railway.app) · [City evidence review](https://draindispatchserver-production.up.railway.app/city). Enable **Include labeled demo reports** to inspect the saved tests; they are excluded from real statistics. The built website/API and private persistent Photon worker are hosted on Railway. See [release verification](docs/verification-evidence.md#production-release) for evidence and remaining live acceptance steps.
+[Current production dashboard](https://draindispatchserver-production.up.railway.app) · [City evidence review](https://draindispatchserver-production.up.railway.app/city). Production remains the verified DrainDispatch release; this branch previews the Clearflow design and rebrand. Enable **Include labeled demo reports** to inspect saved tests; they are excluded from real statistics. The existing website/API and private persistent Photon worker remain hosted on Railway. See [release verification](docs/verification-evidence.md#production-release) and [Clearflow preview plan](docs/clearflow-preview.md).
 
 ## Run locally
 
@@ -18,6 +18,8 @@ npm run dev
 ```
 
 Open **http://localhost:5173**. API: **http://localhost:3001/api/health**.
+
+For a separate, synthetic preview, build and run `node --import tsx scripts/city-showcase.ts`. It starts a new database on an available loopback port; existing reports and production remain untouched. Open the printed origin for the community page, then **Employee login → Continue to demo** for the review workspace. `/employee` is the new employee route; `/city` remains compatible. Demo entry collects no credentials and grants no administrative permissions.
 
 Keep DATABASE_MODE=local and IMAGE_STORAGE=local for local development. Reports persist in embedded PostgreSQL at .data/postgres; sanitized photos persist in server/uploads. These adapters are explicitly labeled local and refused in production. No sponsor credential is required to test manual reporting.
 

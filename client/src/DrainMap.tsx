@@ -1,6 +1,5 @@
 import {
   MapContainer,
-  TileLayer,
   Marker,
   Popup,
   useMap,
@@ -10,6 +9,7 @@ import L from "leaflet";
 import { useEffect } from "react";
 import type { Incident } from "./types";
 import { categories, statuses } from "./types";
+import MapTiles, { ResponsiveMap } from "./MapTiles";
 export const center: [number, number] = [35.9132, -79.0558];
 function icon(color: string, selected = false) {
   return L.divIcon({
@@ -48,10 +48,6 @@ function Controls({
       map.fitBounds(L.latLngBounds(incidents.map(item => [item.latitude, item.longitude] as [number, number])), { padding: [40, 40], maxZoom: 15, animate: false });
     }
   }, [map, incidentLocations, focus?.id, onPick]);
-  useEffect(() => {
-    const id = setTimeout(() => map.invalidateSize(), 180);
-    return () => clearTimeout(id);
-  }, [map]);
   return null;
 }
 export default function DrainMap({
@@ -83,10 +79,8 @@ export default function DrainMap({
         zoom={14}
         scrollWheelZoom={false}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <MapTiles />
+        <ResponsiveMap />
         <Controls onPick={onPick} position={position} incidents={incidents} focus={focus} />
         {incidents.map((incident) => (
           <Marker

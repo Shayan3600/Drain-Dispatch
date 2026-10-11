@@ -246,7 +246,7 @@ test("worker routing context is retained for direct messages and excluded from g
     ...message,
     space: { id: "group-chat", type: "group" },
   } as unknown as Message;
-  assert.equal((await normalizeProviderMessage(group))?.chatId, undefined);
+  await assert.rejects(normalizeProviderMessage(group), /private conversation/);
 });
 
 test("confirmed Photon draft subscribes its private sender and actual status changes enqueue once", async () => {

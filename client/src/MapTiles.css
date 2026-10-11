@@ -1,0 +1,6 @@
+.map-tile-notice { position: absolute; z-index: 800; left: 54px; right: 14px; top: 14px; max-width: 390px; display: flex; flex-direction: column; gap: 7px; padding: 12px 14px; border: 1px solid #c7d8c5; border-radius: 12px; background: #fbfdf7f5; color: #234e4b; box-shadow: 0 4px 16px #153f4520; font-family: inherit; font-size: 12px; line-height: 1.45; }
+.map-tile-notice strong { font-size: 13px; }
+.map-tile-notice button { align-self: flex-start; min-height: 36px; padding: 6px 12px; border: 1px solid #9dbca6; border-radius: 8px; background: white; color: #234e4b; font: inherit; cursor: pointer; }
+.map-tile-notice button:focus-visible { outline: 3px solid #187fb1; outline-offset: 3px; }
+.cr-city-map .map-tile-notice { top: 108px; }
+@media (max-width: 480px) { .map-tile-notice { left: 52px; right: 10px; padding: 10px; font-size: 11px; } }

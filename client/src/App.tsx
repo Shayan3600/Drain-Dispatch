@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowDown,
-  ArrowRight,
   ArrowUpRight,
   CheckCheck,
   ChevronRight,
@@ -12,19 +10,19 @@ import {
   Leaf,
   LoaderCircle,
   MapPin,
-  Menu,
-  MessageCircle,
   Plus,
   RefreshCw,
   Search,
   ShieldCheck,
   Waves,
-  X,
 } from "lucide-react";
 import DrainMap from "./DrainMap";
 import IncidentDetail from "./IncidentDetail";
 import ReportForm from "./ReportForm";
 import ActivityTrend from "./ActivityTrend";
+import { ClearflowIntro, ClearflowCommunity, ClearflowFooter } from "./Clearflow";
+import "./clearflow-theme.css";
+import "./clearflow-live.css";
 import { api, date, list } from "./api";
 import {
   categories,
@@ -35,75 +33,6 @@ import {
   type Status,
   type Weather,
 } from "./types";
-const official =
-  "https://www.chapelhillnc.gov/Town-Government/Departments-and-Offices/Public-Works/Stormwater-Management/Flooding-and-Drainage";
-function Waterscape() {
-  return (
-    <svg
-      className="waterscape"
-      viewBox="0 0 720 350"
-      role="img"
-      aria-label="Illustration of green hills and a clear stream beneath a blue sky"
-    >
-      <defs>
-        <linearGradient id="sky" x2="0" y2="1">
-          <stop stopColor="#bcdfef" />
-          <stop offset="1" stopColor="#ecf8fa" />
-        </linearGradient>
-        <linearGradient id="water" x2="0" y2="1">
-          <stop stopColor="#8ed6dd" />
-          <stop offset="1" stopColor="#31899d" />
-        </linearGradient>
-        <linearGradient id="hill" x2="0" y2="1">
-          <stop stopColor="#b5d983" />
-          <stop offset="1" stopColor="#459370" />
-        </linearGradient>
-        <radialGradient id="sun">
-          <stop stopColor="#fffef2" />
-          <stop offset=".4" stopColor="#fffef2" stopOpacity=".85" />
-          <stop offset="1" stopColor="#fffef2" stopOpacity="0" />
-        </radialGradient>
-        <filter id="blur">
-          <feGaussianBlur stdDeviation="6" />
-        </filter>
-      </defs>
-      <rect width="720" height="350" fill="url(#sky)" />
-      <circle cx="554" cy="70" r="73" fill="url(#sun)" />
-      <g fill="white" opacity=".7" filter="url(#blur)">
-        <ellipse cx="174" cy="63" rx="75" ry="13" />
-        <ellipse cx="388" cy="102" rx="65" ry="10" />
-      </g>
-      <path
-        d="M0 206 Q124 103 264 176 Q404 98 548 166 Q667 113 720 135 V350 H0Z"
-        fill="#90bdac"
-        opacity=".6"
-      />
-      <path
-        d="M0 231 Q126 161 268 211 Q408 156 540 213 Q679 149 720 188 V350 H0Z"
-        fill="url(#hill)"
-      />
-      <path
-        d="M379 208 Q282 237 441 260 Q615 286 228 350 H670 Q775 299 492 256 Q350 232 408 212Z"
-        fill="url(#water)"
-      />
-      <path d="M0 254 Q148 218 311 248 Q293 292 84 350 H0Z" fill="#67a574" />
-      <path d="M0 280 Q129 234 255 267 Q163 301 152 350 H0Z" fill="#81ba73" />
-      <g fill="none" stroke="#ddf8f5" strokeLinecap="round" opacity=".65">
-        <path d="M382 230h24m-21 8h59m1 36h70m-33 8h78m-87 37h104m-152 15h103" />
-      </g>
-      <g fill="#326f5b">
-        <path d="M632 243v-70l-24 43h16l-21 27zm-11-29h23l-14-29zm40 39v-55l-21 35h13l-17 20z" />
-        <path d="M115 247v-54l-21 37h12l-16 17z" />
-      </g>
-      <g fill="#eff8d9" opacity=".6">
-        <circle cx="44" cy="297" r="2" />
-        <circle cx="78" cy="270" r="2" />
-        <circle cx="146" cy="274" r="2" />
-        <circle cx="202" cy="253" r="1.5" />
-      </g>
-    </svg>
-  );
-}
 export default function App() {
   const [incidents, setIncidents] = useState<Incident[]>([]),
     [stats, setStats] = useState<Stats>(),
@@ -117,7 +46,6 @@ export default function App() {
     [status, setStatus] = useState("active"),
     [query, setQuery] = useState(""),
     [showDemo, setShowDemo] = useState(false),
-    [mobileNav, setMobileNav] = useState(false),
     [focusedIncident, setFocusedIncident] = useState<Incident>(),
     [revealSavedReport, setRevealSavedReport] = useState(false);
   const draftToken = useMemo(
@@ -128,28 +56,44 @@ export default function App() {
     [],
   );
   const [activeDraft, setActiveDraft] = useState(draftToken);
+  const refreshController = useRef<AbortController>(undefined);
   const refresh = useCallback(async (silent = false) => {
+    if (silent && refreshController.current) return;
+    refreshController.current?.abort();
+    const controller = new AbortController();
+    refreshController.current = controller;
+    const current = () => !controller.signal.aborted && refreshController.current === controller;
     if (!silent) setLoading(true);
-    void api<Weather>("/weather")
-      .then(setWeather)
-      .catch(() => setWeather(undefined));
-    const results = await Promise.allSettled([
-      api<Incident[] | { incidents: Incident[] }>("/incidents"),
-      api<Stats>("/stats"),
-    ]);
-    if (results[0].status === "fulfilled") {
-      setIncidents(list(results[0].value, "incidents"));
-      setError("");
-      setUpdated(new Date());
-    } else setError(results[0].reason.message);
-    if (results[1].status === "fulfilled") setStats(results[1].value);
-    else setStats(undefined);
-    setLoading(false);
+    const readOptions = { signal: controller.signal };
+    const incidentRead = api<Incident[] | { incidents: Incident[] }>("/incidents", readOptions)
+      .then(result => {
+        if (!current()) return;
+        setIncidents(list(result, "incidents"));
+        setError("");
+        setUpdated(new Date());
+      })
+      .catch(reason => { if (current()) setError(reason instanceof Error ? reason.message : "Reports could not be loaded."); })
+      .finally(() => { if (current()) setLoading(false); });
+    const statsRead = api<Stats>("/stats", readOptions)
+      .then(result => { if (current()) setStats(result); })
+      .catch(() => { if (current()) setStats(undefined); });
+    const weatherRead = api<Weather>("/weather", readOptions)
+      .then(result => { if (current()) setWeather(result); })
+      .catch(() => { if (current()) setWeather(undefined); });
+    await Promise.allSettled([incidentRead, statsRead, weatherRead]);
+    if (refreshController.current === controller) refreshController.current = undefined;
   }, []);
   useEffect(() => {
     void refresh();
-    const interval = setInterval(() => void refresh(true), 30000);
-    return () => clearInterval(interval);
+    const poll = () => { if (!document.hidden) void refresh(true); };
+    const interval = setInterval(poll, 30000);
+    document.addEventListener("visibilitychange", poll);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", poll);
+      refreshController.current?.abort();
+      refreshController.current = undefined;
+    };
   }, [refresh]);
   const filtered = useMemo(
     () =>
@@ -172,28 +116,28 @@ export default function App() {
       label: "Active incidents",
       value: stats?.activeIncidents,
       icon: Droplets,
-      note: "Awaiting or under review",
+      note: "Open reports",
       color: "blue",
     },
     {
       label: "Community observations",
       value: stats?.observationCount,
       icon: Eye,
-      note: "Evidence from residents",
+      note: "Reports and follow-ups",
       color: "green",
     },
     {
       label: "Closed incidents",
       value: stats?.closedIncidents,
       icon: CheckCheck,
-      note: "With follow-up recorded",
+      note: "Marked closed",
       color: "teal",
     },
     {
       label: "Total incidents",
       value: stats?.totalIncidents,
       icon: MapPin,
-      note: "Real reports, all statuses",
+      note: "All statuses",
       color: "amber",
     },
   ];
@@ -224,106 +168,13 @@ export default function App() {
     }
   }
   return (
-    <>
+    <div className="clearflow-home">
       <a href="#dashboard" className="skip-link">
         Skip to incident dashboard
       </a>
-      <header className="site-header">
-        <div className="header-inner">
-          <a href="/" className="brand" aria-label="DrainDispatch home">
-            <span className="brand-mark">
-              <Droplets size={25} />
-            </span>
-            <span>
-              Drain<span className="brand-accent">Dispatch</span>
-              <small>COMMUNITY STORMWATER WATCH</small>
-            </span>
-          </a>
-          <nav
-            className={mobileNav ? "nav-open" : ""}
-            aria-label="Main navigation"
-          >
-            <a href="#dashboard" onClick={() => setMobileNav(false)}>
-              Live map
-            </a>
-            <a href="#community" onClick={() => setMobileNav(false)}>
-              How it works
-            </a>
-            <a href="#impact" onClick={() => setMobileNav(false)}>
-              Community impact
-            </a>
-          </nav>
-          <div className="header-actions">
-            <button
-              className="button primary report-header"
-              onClick={() => setReportOpen(true)}
-            >
-              <Plus size={17} />
-              Report a drain
-            </button>
-            <button
-              className="icon-button mobile-toggle"
-              onClick={() => setMobileNav(!mobileNav)}
-              aria-label="Toggle navigation"
-              aria-expanded={mobileNav}
-            >
-              {mobileNav ? <X /> : <Menu />}
-            </button>
-          </div>
-        </div>
-      </header>
+      <ClearflowIntro onReport={() => setReportOpen(true)} />
       <main>
-        <section className="hero">
-          <div className="hero-content">
-            <div className="eyebrow">
-              <span className="pulse-dot" />
-              CHAPEL HILL, NORTH CAROLINA
-            </div>
-            <h1>
-              Small observations.
-              <br />
-              <span>Healthier waterways.</span>
-            </h1>
-            <p>
-              See the blockage. Prevent the backup.
-              <br />
-              Help your community turn drainage concerns into a clearer picture
-              of what needs attention.
-            </p>
-            <div className="hero-actions">
-              <button
-                className="button primary"
-                onClick={() => setReportOpen(true)}
-              >
-                <Plus size={17} />
-                Share an observation
-              </button>
-              <a className="button hero-link" href="#dashboard">
-                Explore the map <ArrowDown size={17} />
-              </a>
-            </div>
-            <div className="hero-note">
-              <ShieldCheck size={15} />
-              Community reporting. Human review. Safer participation.
-            </div>
-          </div>
-          <div className="hero-art">
-            <Waterscape />
-            <div className="glass-bubble">
-              <span>
-                <Leaf size={22} />
-              </span>
-              <div>
-                <strong>Every observation adds clarity.</strong>
-                <small>Connected communities. Connected waterways.</small>
-              </div>
-            </div>
-            <div className="art-label">
-              <Waves size={15} />A little care, downstream.
-            </div>
-          </div>
-        </section>
-        <div className="main-shell">
+        <div className="main-shell clearflow-live">
           <section
             className="weather-strip"
             aria-label="Official weather context"
@@ -334,14 +185,14 @@ export default function App() {
                 {weather?.alerts?.length
                   ? weather.alerts[0].event
                   : weather && !weather.unavailable
-                    ? "Official weather awareness"
-                    : "Weather context unavailable"}
+                    ? "Chapel Hill weather"
+                    : "Weather unavailable"}
               </strong>
               <span>
                 {weather?.alerts?.length
                   ? weather.alerts[0].headline
                   : weather && !weather.unavailable
-                    ? "No active rain, flood, or thunderstorm alerts returned for Chapel Hill. Conditions can change."
+                    ? "No current rain, flood or thunderstorm alerts for Chapel Hill."
                     : "Check the National Weather Service for current alerts."}
               </span>
             </div>
@@ -376,7 +227,7 @@ export default function App() {
               </span>
             </div>
           ) : null}
-          <p className="metrics-context">Community counts · Real reports only · Demo reports are excluded</p>
+          <p className="metrics-context">Real reports only · Demo reports are excluded</p>
           <section className="metrics" aria-label="Measured community activity">
             {metrics.map(({ label, value, icon: Icon, note, color }) => (
               <article className="metric-card" key={label}>
@@ -396,15 +247,15 @@ export default function App() {
           {showDemo && (
             <div className="demo-preview-notice" role="status">
               <span><strong>Demo preview</strong> · {visibleDemos.length} demo reports shown · {visibleDemos.filter(item => item.status !== "closed").length} active · {visibleDemos.filter(item => item.status === "closed").length} closed</span>
-              <small>Demo records are shown on the map. Real-report statistics above remain separate.</small>
+              <small>Demo reports are excluded from statistics.</small>
             </div>
           )}
           <section className="dashboard-section" id="dashboard">
             <div className="section-heading">
               <div>
-                <span className="eyebrow">OUR NEIGHBORHOOD, IN VIEW</span>
+                <span className="eyebrow">CHAPEL HILL REPORTS</span>
                 <h2>Community drainage map</h2>
-                <p>Explore reported concerns. Add context where it counts.</p>
+                <p>View reports and add observations.</p>
               </div>
               <div className="live-controls">
                 <span className="live-label">
@@ -428,8 +279,7 @@ export default function App() {
             {error && (
               <div className="notice error" role="alert">
                 <span>
-                  {error} Your report can be prepared while the service
-                  reconnects.
+                  {error}
                 </span>
                 <button className="text-link" onClick={() => void refresh()}>
                   Try again
@@ -509,7 +359,7 @@ export default function App() {
                   {loading && !updated ? (
                     <div className="list-empty">
                       <LoaderCircle size={28} className="spin" />
-                      <strong>Bringing the map into view…</strong>
+                      <strong>Loading reports…</strong>
                     </div>
                   ) : filtered.length ? (
                     filtered.map((i) => (
@@ -548,17 +398,17 @@ export default function App() {
                       </span>
                       <strong>
                         {error
-                          ? "The map is ready to reconnect"
+                          ? "Reports unavailable"
                           : incidents.length
                             ? "No matching reports"
-                            : "A fresh start for the neighborhood"}
+                            : "No reports yet"}
                       </strong>
                       <p>
                         {error
-                          ? "Incidents will appear when the reporting service is available."
+                          ? "Try refreshing to load reports."
                           : incidents.length
-                            ? "Try another filter to see more observations."
-                            : "Be the first to share a drainage observation. Your report will appear here after it is saved."}
+                            ? "Try another filter."
+                            : "Saved reports appear here."}
                       </p>
                       <button
                         className="button secondary compact"
@@ -585,7 +435,7 @@ export default function App() {
               <div className="dashboard-bottom">
                 <span>
                   <ShieldCheck size={14} />
-                  Community evidence, awaiting human review
+                  Community reports · Human review
                 </span>
                 <span>
                   {updated
@@ -595,81 +445,24 @@ export default function App() {
               </div>
             </div>
           </section>
-          <section className="community-section" id="community">
-            <div className="community-intro">
-              <span className="eyebrow">
-                FROM A MOMENT TO A MEANINGFUL REPORT
-              </span>
-              <h2>
-                Notice it. Share it.
-                <br /> Keep the picture clear.
-              </h2>
-              <p>
-                A leaf-covered grate or lingering puddle can be easy to
-                overlook. Your observation helps neighbors understand what is
-                happening and where follow-up is needed.
-              </p>
-              <a
-                href={official}
-                target="_blank"
-                rel="noreferrer"
-                className="text-link"
-              >
-                Connect with Town reporting resources <ArrowUpRight size={16} />
-              </a>
-            </div>
-            <div className="process-cards">
-              {[
-                {
-                  n: "01",
-                  icon: Eye,
-                  title: "Observe safely",
-                  text: "Take a photo or note what you see from a safe place. Stay out of roads and floodwater.",
-                },
-                {
-                  n: "02",
-                  icon: MapPin,
-                  title: "Pin & confirm",
-                  text: "Add the location and review nearby reports. Gemini can help describe photo evidence.",
-                },
-                {
-                  n: "03",
-                  icon: MessageCircle,
-                  title: "Build the picture",
-                  text: "Contribute to an existing incident or create one. Add follow-up evidence when things change.",
-                },
-              ].map(({ n, icon: Icon, title, text }) => (
-                <article key={n}>
-                  <div>
-                    <span className="process-icon">
-                      <Icon size={22} />
-                    </span>
-                    <small>{n}</small>
-                  </div>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
-                </article>
-              ))}
-            </div>
-          </section>
           <section id="impact" className="impact-section">
             <div className="section-heading">
               <div>
                 <span className="eyebrow">
-                  MEASURED ACTIVITY, SHARED AWARENESS
+                  REPORT STATISTICS
                 </span>
-                <h2>A community taking notice</h2>
-                <p>Reporting trends from actual incidents and observations.</p>
+                <h2>Reporting activity</h2>
+                <p>Counts and trends from saved reports.</p>
               </div>
               <span className="data-source">
                 <span className="pulse-dot" />
-                {stats ? "Live database metrics" : "Metrics unavailable"}
+                {stats ? "Live report counts" : "Metrics unavailable"}
               </span>
             </div>
             <div className="analytics-grid">
               <article className="analytics-card">
                 <div className="analytics-heading">
-                  <h3>What we're noticing</h3>
+                  <h3>Reports by type</h3>
                   <span>By concern type</span>
                 </div>
                 {Object.entries(categories).map(([key, label]) => {
@@ -736,8 +529,8 @@ export default function App() {
                     <Waves size={28} />
                     <p>
                       {stats
-                        ? "Your first reports will start the trend."
-                        : "Reporting metrics are unavailable right now."}
+                        ? "No reports yet."
+                        : "Statistics unavailable."}
                     </p>
                   </div>
                 )}
@@ -751,7 +544,7 @@ export default function App() {
                 </div>
                 {!!stats?.repeatedLocations?.length && (
                   <details className="recurring-areas">
-                    <summary>Explore recurring reporting areas</summary>
+                    <summary>Areas with repeated reports</summary>
                     <ul>
                       {stats.repeatedLocations.map((area, index) => (
                         <li key={index}>
@@ -775,76 +568,30 @@ export default function App() {
                   <Waves size={42} />
                   <Leaf size={27} />
                 </div>
-                <span className="eyebrow">EVERYTHING FLOWS TOGETHER</span>
+                <span className="eyebrow">STORMWATER</span>
                 <h3>
-                  Our streets connect
+                  Stormwater
                   <br />
-                  to our streams.
+                  resources
                 </h3>
                 <p>
-                  Visible drainage concerns are one part of a bigger water
-                  story. Better observations support awareness and informed
-                  follow-up.
+                  Read the Town’s stormwater guidance and reporting information.
                 </p>
                 <a
                   href="https://www.chapelhillnc.gov/Town-Government/Departments-and-Offices/Public-Works/Stormwater-Management"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Explore local stormwater <ArrowUpRight size={15} />
+                  Town stormwater resources <ArrowUpRight size={15} />
                 </a>
               </article>
             </div>
             <ActivityTrend stats={stats} />
           </section>
-          <section className="participation-banner">
-            <span className="banner-icon">
-              <Droplets size={33} />
-            </span>
-            <div>
-              <h2>A little attention goes a long way.</h2>
-              <p>Make your next observation part of the community picture.</p>
-            </div>
-            <button
-              className="button primary"
-              onClick={() => setReportOpen(true)}
-            >
-              Report a drain <ArrowRight size={17} />
-            </button>
-          </section>
         </div>
       </main>
-      <footer>
-        <div className="footer-main">
-          <a className="brand" href="/">
-            <span className="brand-mark">
-              <Droplets size={23} />
-            </span>
-            <span>
-              Drain<span className="brand-accent">Dispatch</span>
-              <small>SEE THE BLOCKAGE. PREVENT THE BACKUP.</small>
-            </span>
-          </a>
-          <p>
-            A HackNC 2026 community prototype.
-            <br />
-            Independent of the Town of Chapel Hill.
-          </p>
-          <a href={official} target="_blank" rel="noreferrer">
-            Official stormwater resources <ArrowUpRight size={14} />
-          </a>
-        </div>
-        <div className="footer-bottom">
-          <span>
-            <ShieldCheck size={14} />
-            Observe safely. Never enter drains, floodwater, or active roadways.
-          </span>
-          <span>
-            Community reports do not automatically notify the Town. Not an
-            emergency service.
-          </span>
-        </div>
-      </footer>
+      <ClearflowCommunity onReport={() => setReportOpen(true)} />
+      <ClearflowFooter />
       {(reportOpen || activeDraft) && (
         <ReportForm
           draftToken={activeDraft}
@@ -859,6 +606,6 @@ export default function App() {
           onChanged={() => void refresh()}
         />
       )}
-    </>
+    </div>
   );
 }

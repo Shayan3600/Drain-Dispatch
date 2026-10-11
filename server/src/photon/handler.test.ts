@@ -14,7 +14,7 @@ const options = { secret, appUrl: "https://drain.example" };
 const senderId = "+15550001111";
 
 test("iPhone HEIC and undeclared oversized provider streams fail with actionable guidance and cancellation", async () => {
-  const event = (content: object) => ({ id: "attachment-limits", direction: "inbound", sender: { id: senderId }, content }) as unknown as Message;
+  const event = (content: object) => ({ id: "attachment-limits", direction: "inbound", sender: { id: senderId }, space: { type: "dm", id: "synthetic-direct-chat" }, content }) as unknown as Message;
   await assert.rejects(normalizeProviderMessage(event({ type: "attachment", mimeType: "image/heic" })), /JPEG\/PNG screenshot.*Most Compatible/);
   let cancelled = false;
   const stream = new ReadableStream({ start(controller) { controller.enqueue(Buffer.alloc(8 * 1024 * 1024 + 1)); }, cancel() { cancelled = true; } });
@@ -25,7 +25,7 @@ test("iPhone HEIC and undeclared oversized provider streams fail with actionable
 test("provider errors cannot expose secret-bearing SDK details in a reply", async () => {
   const privateDetail = "credential-or-private-provider-detail";
   const event = {
-    id: "private-error-test", direction: "inbound", sender: { id: senderId },
+    id: "private-error-test", direction: "inbound", sender: { id: senderId }, space: { type: "dm", id: "synthetic-direct-chat" },
     content: { type: "attachment", mimeType: "image/jpeg", stream: async () => { throw new Error(privateDetail); } },
   } as unknown as Message;
   try { await normalizeProviderMessage(event); assert.fail("Expected provider failure"); }
@@ -38,6 +38,50 @@ test("provider errors cannot expose secret-bearing SDK details in a reply", asyn
 });
 let engine: PGlite;
 let reporting: Reporting;
+
+test("group reporting is rejected before attachment reads or private draft creation", async () => {
+  let reads = 0;
+  const group = provider({ type: "attachment", mimeType: "image/jpeg", stream: async () => { reads++; return new ReadableStream(); } }, { space: { type: "group", id: "synthetic-group" } });
+  await assert.rejects(normalizeProviderMessage(group), /private conversation/);
+  assert.equal(reads, 0);
+  const before = (await reporting.db.query("SELECT count(*)::int count FROM report_drafts")).rows[0].count;
+  let imageOperations = 0;
+  const reply = await processIncoming({ id: "group-report-refused", senderId: "synthetic-group-sender", text: "REPORT Synthetic group evidence", photo: Buffer.from("synthetic-photo") }, reporting, { ...options, images: {
+    sanitize: async bytes => { imageOperations++; return { bytes, mimeType: "image/jpeg" }; },
+    store: async () => { imageOperations++; return { url: "https://images.example/group-fixture.jpg", storageKey: "synthetic-group" }; },
+    analyze: async () => { imageOperations++; throw new Error("Synthetic analysis unavailable"); },
+  } });
+  assert.match(reply.responseText, /private conversation/);
+  assert.equal(reply.responseText.includes("/confirm/"), false);
+  assert.equal(imageOperations, 0);
+  assert.equal((await reporting.db.query("SELECT count(*)::int count FROM report_drafts")).rows[0].count, before);
+});
+
+test("one attachment deadline bounds opening and stalled reading and cancels late streams", async () => {
+  let readCancelled = false;
+  const stalled = new ReadableStream({ cancel() { readCancelled = true; } });
+  await assert.rejects(normalizeProviderMessage(provider({ type: "attachment", mimeType: "image/jpeg", stream: async () => stalled }), { attachmentTimeoutMs: 20 }), /download took too long/);
+  assert.equal(readCancelled, true);
+  let lateCancelled = false;
+  let release!: (stream: ReadableStream) => void;
+  const opening = new Promise<ReadableStream>(resolve => { release = resolve; });
+  await assert.rejects(normalizeProviderMessage(provider({ type: "attachment", mimeType: "image/jpeg", stream: () => opening }), { attachmentTimeoutMs: 20 }), /download took too long/);
+  release(new ReadableStream({ cancel() { lateCancelled = true; } }));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(lateCancelled, true);
+  assert.equal((await normalizeProviderMessage(provider({ type: "text", text: "HELP" })))?.text, "HELP", "the next message remains processable");
+});
+
+test("explicit REPORT DEMO classification survives confirmation and keeps test evidence out of real metrics", async () => {
+  const before = await reporting.stats();
+  const response = await processIncoming({ id: "explicit-demo-draft", senderId, chatId: "synthetic-direct-chat", text: "REPORT DEMO: Synthetic leaves at a grate" }, reporting, options);
+  const token = response.responseText.match(/\/confirm\/([a-f0-9]+)/)?.[1];
+  assert.ok(token);
+  assert.equal((await reporting.getDraft(token)).isDemo, true);
+  const saved = await reporting.confirmDraft(token, { latitude: 1, longitude: 1, description: "Synthetic confirmed demonstration", issueType: "blocked_drain", locationConfirmed: true, idempotencyKey: randomUUID() });
+  assert.equal(saved.isDemo, true);
+  assert.deepEqual(await reporting.stats(), before);
+});
 
 test("RESUME is sender-scoped, rotates an expired token, preserves confirmed photo evidence, and replays retries", async () => {
   const owner = "resume-test-owner";
@@ -110,7 +154,7 @@ test("confirmed photo observation attaches evidence to the existing incident and
     store: async () => { stores++; return { url: "https://images.example/followup.jpg", storageKey: "followup-photo" }; },
     analyze: async () => ({ drainVisible: true, suggestedCategory: "blocked_drain", visibleEvidence: "Leaves remain visible on the grate.", humanReviewRecommended: true, uncertainty: "medium" }),
   } };
-  const incoming = { id: "photo-observe-confirm", senderId, text: `OBSERVE ${original.id} CONFIRM Leaves remain visible on this same grate`, photo: Buffer.from("mock photo evidence") };
+  const incoming = { id: "photo-observe-confirm", senderId, chatId: "synthetic-direct-chat", text: `OBSERVE ${original.id} CONFIRM Leaves remain visible on this same grate`, photo: Buffer.from("mock photo evidence") };
   const before = (await reporting.list()).length;
   const reply = await processIncoming(incoming, reporting, photoOptions);
   assert.match(reply.responseText, /Observation saved to incident/);
@@ -126,7 +170,7 @@ test("confirmed photo observation attaches evidence to the existing incident and
 
 test("photo OBSERVE without physical-drain confirmation never uploads or posts evidence", async () => {
   let stores = 0;
-  const result = await processIncoming({ id: "unconfirmed-photo-observe", senderId, text: `OBSERVE ${randomUUID()} More leaves`, photo: Buffer.from("mock photo") }, reporting, {
+  const result = await processIncoming({ id: "unconfirmed-photo-observe", senderId, chatId: "synthetic-direct-chat", text: `OBSERVE ${randomUUID()} More leaves`, photo: Buffer.from("mock photo") }, reporting, {
     ...options, images: { sanitize: async bytes => ({ bytes, mimeType: "image/jpeg" }), store: async () => { stores++; throw new Error("Should not store"); }, analyze: async () => { throw new Error("Should not analyze"); } },
   });
   assert.match(result.responseText, /No observation has been posted yet/);
@@ -158,13 +202,13 @@ after(async () => {
 test("HELP and missing description explain explicit location confirmation without creating an incident", async () => {
   const before = (await reporting.list()).length;
   const help = await processIncoming(
-    { id: "help", senderId, text: "HELP" },
+    { id: "help", senderId, chatId: "synthetic-direct-chat", text: "HELP" },
     reporting,
     options,
   );
   assert.match(help.responseText, /private link to confirm the location/);
   const empty = await processIncoming(
-    { id: "empty-report", senderId, text: "REPORT" },
+    { id: "empty-report", senderId, chatId: "synthetic-direct-chat", text: "REPORT" },
     reporting,
     options,
   );
@@ -176,7 +220,7 @@ test("simulated message creates a private draft; confirmation creates a persiste
   const before = (await reporting.list()).length;
   const incoming = {
     id: "text-report",
-    senderId,
+    senderId, chatId: 'synthetic-direct-chat',
     text: "REPORT Leaves cover this drain grate",
   };
   const reply = await processIncoming(incoming, reporting, options);
@@ -200,7 +244,7 @@ test("simulated message creates a private draft; confirmation creates a persiste
   assert.equal(found.issueType, "blocked_drain");
   assert.equal(found.observationCount, 1);
   const status = await processIncoming(
-    { id: "status-1", senderId, text: `STATUS ${saved.id}` },
+    { id: "status-1", senderId, chatId: "synthetic-direct-chat", text: `STATUS ${saved.id}` },
     reporting,
     options,
   );
@@ -211,7 +255,7 @@ test("simulated message creates a private draft; confirmation creates a persiste
 test("concurrent provider retries and worker restarts create only one draft and replay the same reply", async () => {
   const incoming = {
     id: "concurrent-report",
-    senderId,
+    senderId, chatId: 'synthetic-direct-chat',
     text: "REPORT A second drain has leaves",
   };
   const replies = await Promise.all(
@@ -249,7 +293,7 @@ test("concurrent provider retries and worker restarts create only one draft and 
 test("recovery after reply receipt failure preserves the original confirmation link", async () => {
   const incoming = {
     id: "crash-retry",
-    senderId,
+    senderId, chatId: 'synthetic-direct-chat',
     text: "REPORT Debris around a drain",
   };
   const reply = await processIncoming(incoming, reporting, options);
@@ -278,7 +322,7 @@ test("recovery after reply receipt failure preserves the original confirmation l
 test("independent handler instances process a simultaneous retry without creating two drafts", async () => {
   const input = {
     id: "multi-instance",
-    senderId,
+    senderId, chatId: 'synthetic-direct-chat',
     text: "REPORT Litter around the drain grate",
   };
   const replies = await Promise.all([
@@ -324,7 +368,7 @@ test("photo analysis unavailable still persists photo evidence and creates an ed
   };
   const incoming = {
     id: "photo-report",
-    senderId,
+    senderId, chatId: 'synthetic-direct-chat',
     text: "",
     photo: Buffer.from("mocked-provider-photo"),
   };
@@ -345,7 +389,7 @@ test("structured photo findings remain draft suggestions before explicit locatio
   const reply = await processIncoming(
     {
       id: "analyzed-photo",
-      senderId,
+      senderId, chatId: 'synthetic-direct-chat',
       text: "My observation",
       photo: Buffer.from("photo"),
     },
@@ -389,7 +433,7 @@ test("OBSERVE requires same-drain confirmation and retried confirmed observation
   const prompt = await processIncoming(
     {
       id: "observe-unconfirmed",
-      senderId,
+      senderId, chatId: 'synthetic-direct-chat',
       text: `OBSERVE ${report.id} More leaves are visible`,
     },
     reporting,
@@ -399,7 +443,7 @@ test("OBSERVE requires same-drain confirmation and retried confirmed observation
   assert.equal((await reporting.detail(report.id)).observationCount, 1);
   const incoming = {
     id: "observe-confirmed",
-    senderId,
+    senderId, chatId: 'synthetic-direct-chat',
     text: `OBSERVE ${report.id} CONFIRM More leaves are visible`,
   };
   await Promise.all([
@@ -411,13 +455,13 @@ test("OBSERVE requires same-drain confirmation and retried confirmed observation
 
 test("NEARBY validates coordinates and returns candidate references without automatic merging", async () => {
   const invalid = await processIncoming(
-    { id: "bad-nearby", senderId, text: "NEARBY 900 -79 blocked_drain" },
+    { id: "bad-nearby", senderId, chatId: "synthetic-direct-chat", text: "NEARBY 900 -79 blocked_drain" },
     reporting,
     options,
   );
   assert.match(invalid.responseText, /Send NEARBY/);
   const candidates = await processIncoming(
-    { id: "nearby", senderId, text: "NEARBY 35.9132 -79.0558 blocked_drain" },
+    { id: "nearby", senderId, chatId: "synthetic-direct-chat", text: "NEARBY 35.9132 -79.0558 blocked_drain" },
     reporting,
     options,
   );
@@ -429,7 +473,7 @@ test("NEARBY validates coordinates and returns candidate references without auto
 
 test("CONSENT and STOP persist a private hashed identity without exposing phone numbers", async () => {
   await processIncoming(
-    { id: "consent", senderId, text: "CONSENT" },
+    { id: "consent", senderId, chatId: "synthetic-direct-chat", text: "CONSENT" },
     reporting,
     options,
   );
@@ -445,7 +489,7 @@ test("CONSENT and STOP persist a private hashed identity without exposing phone 
   assert.equal(consent?.follow_up_consent, true);
   assert.equal(JSON.stringify(consent).includes(senderId), false);
   await processIncoming(
-    { id: "stop", senderId, text: "STOP" },
+    { id: "stop", senderId, chatId: "synthetic-direct-chat", text: "STOP" },
     reporting,
     options,
   );
@@ -465,6 +509,7 @@ function provider(content: unknown, extra: object = {}): Message {
     id: "provider-event",
     direction: "inbound",
     sender: { id: senderId, __platform: "imessage" },
+    space: { type: "dm", id: "synthetic-direct-chat" },
     content,
     ...extra,
   } as Message;
@@ -541,7 +586,7 @@ test("Spectrum forwards message identity and attachment to the protected central
   const result = await forwardToApi(
     {
       id: "sdk-id",
-      senderId,
+      senderId, chatId: 'synthetic-direct-chat',
       text: "REPORT Example",
       photo: Buffer.from("photo"),
     },
@@ -560,7 +605,7 @@ test("Spectrum does not repeat permanent API validation failures", async () => {
   }) as typeof fetch;
   await assert.rejects(
     forwardToApi(
-      { id: "bad-photo", senderId, text: "" },
+      { id: "bad-photo", senderId, chatId: "synthetic-direct-chat", text: "" },
       { apiUrl: "http://localhost:3001", token: secret },
       request,
     ),

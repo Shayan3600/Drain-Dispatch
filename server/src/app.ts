@@ -54,6 +54,9 @@ export function createApp(db: Database) {
   if (process.env.TRUST_PROXY === "1") app.set("trust proxy", 1);
   app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    // Map providers require a Referer. Send only the origin cross-origin so
+    // private confirmation paths and tokens never accompany map/photo requests.
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
     contentSecurityPolicy: {
       directives: {
         // Production pages load public map tiles and Cloudinary/legacy HTTPS photo evidence.
@@ -175,9 +178,10 @@ export function createApp(db: Database) {
         latitude: z.coerce.number().min(-90).max(90),
         longitude: z.coerce.number().min(-180).max(180),
         issueType,
+        demo: z.enum(["true", "false"]).optional(),
       })
       .parse(req.query);
-    res.json(await reporting.nearby(q));
+    res.json(await reporting.nearby({ ...q, demo: q.demo === "true" }));
   });
   app.get("/api/incidents/:id", async (req, res) =>
     res.json(await reporting.detail(z.uuid().parse(req.params.id))),
@@ -370,7 +374,7 @@ export function createApp(db: Database) {
         {
           headers: {
             "User-Agent":
-              "DrainDispatch HackNC prototype (community stormwater observations)",
+              "Clearflow HackNC prototype (community stormwater observations)",
             Accept: "application/geo+json",
           },
           signal: AbortSignal.timeout(8000),
