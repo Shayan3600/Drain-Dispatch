@@ -1,4 +1,4 @@
-import "../config.js";
+import { resolveDatabaseConfig } from "../config.js";
 import { PGlite } from "@electric-sql/pglite";
 import pg from "pg";
 import path from "node:path";
@@ -24,17 +24,16 @@ const root = path.resolve(
 );
 export const projectRoot = root;
 export async function openDatabase(localPath?: string): Promise<Database> {
-  let timescale = false;
-  const url = process.env.DATABASE_URL;
-  if (url && !localPath) {
+  const postgres = localPath ? undefined : resolveDatabaseConfig(process.env);
+  if (postgres) {
     const pool = new pg.Pool({
-      connectionString: url,
+      ...postgres,
       max: 10,
       connectionTimeoutMillis: 10000,
     });
     const db: Database = {
       mode: "postgresql",
-      timescale,
+      timescale: false,
       query: async (s, p) => pool.query(s, p),
       close: () => pool.end(),
       transaction: async (fn) => {
@@ -52,24 +51,20 @@ export async function openDatabase(localPath?: string): Promise<Database> {
         }
       },
     };
-    await migrate(db);
-    const result = await db.query(
-      "SELECT 1 FROM pg_extension WHERE extname='timescaledb'",
-    );
-    if (result.rows.length) {
-      await db.query(
-        "SELECT create_hypertable('incident_events', by_range('occurred_at'), if_not_exists => TRUE, migrate_data => TRUE)",
-      );
-      db.timescale = true;
+    try {
+      db.timescale = await migrate(db, true);
+      return db;
+    } catch {
+      await pool.end();
+      throw Object.assign(new Error("PostgreSQL initialization failed. Verify credentials, verified TLS, connectivity, and migration permissions."), { code: "DATABASE_INITIALIZATION_FAILED" });
     }
-    return db;
   }
   if (
     process.env.NODE_ENV === "production" ||
     (!localPath && process.env.DATABASE_MODE !== "local")
   )
     throw new Error(
-      "Set DATABASE_URL, or explicitly set DATABASE_MODE=local for development.",
+      "Set DATABASE_URL or PostgreSQL host credentials, or explicitly set DATABASE_MODE=local for development.",
     );
   const dataPath =
     localPath ??
@@ -86,14 +81,38 @@ export async function openDatabase(localPath?: string): Promise<Database> {
         fn({ query: async (s, p) => (await tx.query(s, p)) as any }),
       ),
   };
-  await migrate(db);
-  return db;
+  try {
+    await migrate(db);
+    return db;
+  } catch (error) {
+    await engine.close();
+    throw error;
+  }
 }
-async function migrate(db: Database) {
-  const sql = await readFile(
-    path.join(root, "server/sql/001_init.sql"),
-    "utf8",
-  );
-  for (const statement of sql.split(";").filter((s) => s.trim()))
-    await db.query(statement);
+async function migrate(db: Database, postgres = false): Promise<boolean> {
+  const migrations = await Promise.all(["001_init.sql", "002_legacy_columns.sql"].map(file =>
+    readFile(path.join(root, "server/sql", file), "utf8")));
+  return db.transaction(async (connection) => {
+    // Serialize migrations across API/worker starts without removing or replacing existing data.
+    if (postgres) await connection.query("SELECT pg_advisory_xact_lock(172934, 1)");
+    for (const sql of migrations)
+      for (const statement of sql.split(";").filter((s) => s.trim()))
+        await connection.query(statement);
+    const legacy = await connection.query("SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='observations' AND column_name='source_event_id'");
+    if (legacy.rows.length)
+      await connection.query("UPDATE observations SET source_message_id=source_event_id WHERE source_message_id IS NULL AND source_event_id IS NOT NULL");
+    const eventKey = await connection.query("SELECT 1 FROM pg_constraint WHERE conrelid='incident_events'::regclass AND contype='p'");
+    if (!eventKey.rows.length)
+      await connection.query("ALTER TABLE incident_events ADD PRIMARY KEY(id,occurred_at)");
+    const eventReference = await connection.query("SELECT 1 FROM pg_constraint WHERE conrelid='incident_events'::regclass AND contype='f' AND confrelid='incidents'::regclass");
+    if (!eventReference.rows.length)
+      await connection.query("ALTER TABLE incident_events ADD CONSTRAINT incident_events_incident_id_fkey FOREIGN KEY(incident_id) REFERENCES incidents(id) NOT VALID");
+    if (!postgres) return false;
+    const result = await connection.query("SELECT 1 FROM pg_extension WHERE extname='timescaledb'");
+    if (!result.rows.length) return false;
+    // Timescale recommends locking referenced tables while migrating an existing foreign-key table.
+    await connection.query("LOCK TABLE incidents IN SHARE ROW EXCLUSIVE MODE");
+    await connection.query("SELECT create_hypertable('incident_events', by_range('occurred_at'), if_not_exists => TRUE, migrate_data => TRUE)");
+    return true;
+  });
 }

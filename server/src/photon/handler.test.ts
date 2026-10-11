@@ -7,13 +7,131 @@ import type { Message } from "spectrum-ts";
 import type { Database } from "../db/database.js";
 import { Reporting } from "../services/reporting.js";
 import { processIncoming, type HandlerOptions } from "./handler.js";
-import { forwardToApi, normalizeProviderMessage } from "./worker.js";
+import { forwardToApi, normalizeProviderMessage, incomingErrorResponse } from "./worker.js";
 
 const secret = "test-worker-secret-at-least-24-characters";
 const options = { secret, appUrl: "https://drain.example" };
 const senderId = "+15550001111";
+
+test("iPhone HEIC and undeclared oversized provider streams fail with actionable guidance and cancellation", async () => {
+  const event = (content: object) => ({ id: "attachment-limits", direction: "inbound", sender: { id: senderId }, content }) as unknown as Message;
+  await assert.rejects(normalizeProviderMessage(event({ type: "attachment", mimeType: "image/heic" })), /JPEG\/PNG screenshot.*Most Compatible/);
+  let cancelled = false;
+  const stream = new ReadableStream({ start(controller) { controller.enqueue(Buffer.alloc(8 * 1024 * 1024 + 1)); }, cancel() { cancelled = true; } });
+  await assert.rejects(normalizeProviderMessage(event({ type: "attachment", mimeType: "image/jpeg", stream: async () => stream })), /8 MB/);
+  assert.equal(cancelled, true);
+});
+
+test("provider errors cannot expose secret-bearing SDK details in a reply", async () => {
+  const privateDetail = "credential-or-private-provider-detail";
+  const event = {
+    id: "private-error-test", direction: "inbound", sender: { id: senderId },
+    content: { type: "attachment", mimeType: "image/jpeg", stream: async () => { throw new Error(privateDetail); } },
+  } as unknown as Message;
+  try { await normalizeProviderMessage(event); assert.fail("Expected provider failure"); }
+  catch (error) {
+    const reply = incomingErrorResponse(error);
+    assert.equal(reply.includes(privateDetail), false);
+    assert.match(reply, /attachment could not be read/);
+  }
+  assert.match(incomingErrorResponse(new Error("Photographs must be 8 MB or smaller. private detail")), /attachment could not be read/);
+});
 let engine: PGlite;
 let reporting: Reporting;
+
+test("RESUME is sender-scoped, rotates an expired token, preserves confirmed photo evidence, and replays retries", async () => {
+  const owner = "resume-test-owner";
+  const messageId = "resume-source-photo";
+  const imageOptions: HandlerOptions = { ...options, images: {
+    sanitize: async bytes => ({ bytes, mimeType: "image/jpeg" }),
+    store: async () => ({ url: "https://images.example/resume-evidence.jpg", storageKey: "resume-preserved-photo" }),
+    analyze: async () => ({ drainVisible: true, suggestedCategory: "blocked_drain", visibleEvidence: "Leaves are visible over the grate.", humanReviewRecommended: true, uncertainty: "medium" }),
+  } };
+  const initial = await processIncoming({ id: messageId, senderId: owner, chatId: "resume-private-chat", text: "REPORT Leaves are visible at this grate", photo: Buffer.from("resume-test-photo") }, reporting, imageOptions);
+  const oldToken = initial.responseText.match(/\/confirm\/([a-zA-Z0-9_-]+)/)?.[1];
+  assert.ok(oldToken);
+  const prior = await reporting.getDraft(oldToken);
+  const groupReply = await processIncoming({ id: "resume-group-request", senderId: owner, text: "RESUME" }, reporting, options);
+  assert.match(groupReply.responseText, /private conversation/);
+  assert.equal(groupReply.responseText.includes("/confirm/"), false);
+  assert.equal((await reporting.getDraft(oldToken)).id, prior.id);
+  const foreign = await processIncoming({ id: "resume-other-person", senderId: "unrelated-sender", chatId: "resume-private-chat", text: "RESUME" }, reporting, options);
+  assert.match(foreign.responseText, /No report draft belongs to this messaging identity/);
+  assert.equal(foreign.responseText.includes("/confirm/"), false);
+  assert.equal((await reporting.getDraft(oldToken)).id, prior.id);
+  const confirmed = await reporting.confirmDraft(oldToken, { latitude: 35.924, longitude: -79.05, description: prior.description, issueType: "blocked_drain", locationConfirmed: true, idempotencyKey: randomUUID() });
+  const before = (await reporting.list()).length;
+  await reporting.db.query("UPDATE report_drafts SET expires_at=now()-interval '1 minute' WHERE id=$1", [prior.id]);
+  await assert.rejects(reporting.getDraft(oldToken), /expired/);
+  const incoming = { id: "resume-request", senderId: owner, chatId: "resume-private-chat", text: "RESUME" };
+  const activeOptions = { ...options, appUrl: "https://fresh-preview.example" };
+  const resumed = await Promise.all([processIncoming(incoming, new Reporting(reporting.db), activeOptions), processIncoming(incoming, new Reporting(reporting.db), activeOptions)]);
+  assert.deepEqual(resumed[0], resumed[1]);
+  assert.match(resumed[0]!.responseText, /https:\/\/fresh-preview\.example\/confirm\//);
+  assert.match(resumed[0]!.responseText, /confirmed report inspection/);
+  const newToken = resumed[0]!.responseText.match(/\/confirm\/([a-zA-Z0-9_-]+)/)?.[1];
+  assert.ok(newToken);
+  assert.notEqual(newToken, oldToken);
+  const recovered = await reporting.getDraft(newToken);
+  assert.equal(recovered.id, prior.id);
+  assert.equal(recovered.photoId, prior.photoId);
+  assert.equal(recovered.photoUrl, prior.photoUrl);
+  assert.deepEqual(recovered.assessment, prior.assessment);
+  assert.equal(recovered.confirmedIncidentId, confirmed.id);
+  assert.ok(new Date(recovered.expiresAt).getTime() > Date.now() + 3500 * 1000);
+  await assert.rejects(reporting.getDraft(oldToken), /expired/);
+  assert.deepEqual(await processIncoming(incoming, new Reporting(reporting.db), activeOptions), resumed[0]);
+  assert.equal((await reporting.list()).length, before);
+});
+
+test("RESUME selects only the latest pending draft for its sender and creates no public incident", async () => {
+  const owner = "pending-resume-owner";
+  await processIncoming({ id: "older-pending-resume-report", senderId: owner, chatId: "pending-resume-chat", text: "REPORT An older observation awaiting location confirmation" }, reporting, options);
+  const original = await processIncoming({ id: "pending-resume-report", senderId: owner, chatId: "pending-resume-chat", text: "REPORT An observation awaiting location confirmation" }, reporting, options);
+  const token = original.responseText.match(/\/confirm\/([a-zA-Z0-9_-]+)/)?.[1];
+  assert.ok(token);
+  const originalDraft = await reporting.getDraft(token);
+  const before = (await reporting.list()).length;
+  const result = await processIncoming({ id: "pending-resume-request", senderId: owner, chatId: "pending-resume-chat", text: "RESUME" }, reporting, options);
+  assert.match(result.responseText, /location confirmation and review/);
+  const resumedToken = result.responseText.match(/\/confirm\/([a-zA-Z0-9_-]+)/)?.[1];
+  assert.ok(resumedToken);
+  const draft = await reporting.getDraft(resumedToken);
+  assert.equal(draft.id, originalDraft.id);
+  assert.equal(draft.confirmedIncidentId, null);
+  assert.equal((await reporting.list()).length, before);
+});
+
+test("confirmed photo observation attaches evidence to the existing incident and retried delivery adds it once", async () => {
+  const original = await reporting.create({ latitude: 35.9201, longitude: -79.051, description: "Drain observation awaiting further evidence", issueType: "blocked_drain", locationConfirmed: true, idempotencyKey: randomUUID() });
+  let stores = 0;
+  const photoOptions: HandlerOptions = { ...options, images: {
+    sanitize: async bytes => ({ bytes, mimeType: "image/jpeg" }),
+    store: async () => { stores++; return { url: "https://images.example/followup.jpg", storageKey: "followup-photo" }; },
+    analyze: async () => ({ drainVisible: true, suggestedCategory: "blocked_drain", visibleEvidence: "Leaves remain visible on the grate.", humanReviewRecommended: true, uncertainty: "medium" }),
+  } };
+  const incoming = { id: "photo-observe-confirm", senderId, text: `OBSERVE ${original.id} CONFIRM Leaves remain visible on this same grate`, photo: Buffer.from("mock photo evidence") };
+  const before = (await reporting.list()).length;
+  const reply = await processIncoming(incoming, reporting, photoOptions);
+  assert.match(reply.responseText, /Observation saved to incident/);
+  assert.match(reply.responseText, /AI uncertainty: medium/);
+  await processIncoming(incoming, new Reporting(reporting.db), photoOptions);
+  const saved = await reporting.detail(original.id);
+  assert.equal(saved.observationCount, 2);
+  assert.equal(saved.observations[0]?.photoUrl, "https://images.example/followup.jpg");
+  assert.equal(saved.observations[0]?.assessment?.uncertainty, "medium");
+  assert.equal((await reporting.list()).length, before);
+  assert.equal(stores, 1);
+});
+
+test("photo OBSERVE without physical-drain confirmation never uploads or posts evidence", async () => {
+  let stores = 0;
+  const result = await processIncoming({ id: "unconfirmed-photo-observe", senderId, text: `OBSERVE ${randomUUID()} More leaves`, photo: Buffer.from("mock photo") }, reporting, {
+    ...options, images: { sanitize: async bytes => ({ bytes, mimeType: "image/jpeg" }), store: async () => { stores++; throw new Error("Should not store"); }, analyze: async () => { throw new Error("Should not analyze"); } },
+  });
+  assert.match(result.responseText, /No observation has been posted yet/);
+  assert.equal(stores, 0);
+});
 before(async () => {
   engine = new PGlite();
   await engine.exec(
@@ -38,6 +156,7 @@ after(async () => {
 });
 
 test("HELP and missing description explain explicit location confirmation without creating an incident", async () => {
+  const before = (await reporting.list()).length;
   const help = await processIncoming(
     { id: "help", senderId, text: "HELP" },
     reporting,
@@ -50,10 +169,11 @@ test("HELP and missing description explain explicit location confirmation withou
     options,
   );
   assert.match(empty.responseText, /confirm the location/);
-  assert.equal((await reporting.list()).length, 0);
+  assert.equal((await reporting.list()).length, before);
 });
 
 test("simulated message creates a private draft; confirmation creates a persistent dashboard incident", async () => {
+  const before = (await reporting.list()).length;
   const incoming = {
     id: "text-report",
     senderId,
@@ -66,7 +186,7 @@ test("simulated message creates a private draft; confirmation creates a persiste
   assert.ok(token);
   const draft = await reporting.getDraft(token);
   assert.equal(draft.description, "Leaves cover this drain grate");
-  assert.equal((await reporting.list()).length, 0);
+  assert.equal((await reporting.list()).length, before);
   const saved = await reporting.confirmDraft(token, {
     latitude: 35.9132,
     longitude: -79.0558,

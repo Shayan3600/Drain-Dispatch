@@ -3,6 +3,14 @@ node_modules
 .git
 .env
 .env.*
+**/*.env
+**/*.env.*
+**/*credentials*
+.tmp
+**/.tmp
+.agents
+.codex
+docs/screenshots
 .data
 **/.data
 uploads

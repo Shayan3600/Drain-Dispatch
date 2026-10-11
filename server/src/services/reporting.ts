@@ -42,7 +42,7 @@ export function incident(r: Row) {
     longitude: r.longitude,
     description: r.description,
     issueType: r.issue_type,
-    status: r.status,
+    status: r.status === "pending" ? "pending_review" : r.status,
     isDemo: r.is_demo,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -71,7 +71,7 @@ export class Reporting {
     filters: { issueType?: string; status?: string; demo?: boolean } = {},
   ) {
     const rows = await this.db.query(
-      `SELECT i.*,count(o.id)::int observation_count FROM incidents i LEFT JOIN observations o ON o.incident_id=i.id WHERE ($1::text IS NULL OR i.issue_type=$1) AND ($2::text IS NULL OR i.status=$2) AND ($3::boolean IS NULL OR i.is_demo=$3) GROUP BY i.id ORDER BY i.created_at DESC LIMIT 500`,
+      `SELECT i.*,count(o.id)::int observation_count FROM incidents i LEFT JOIN observations o ON o.incident_id=i.id WHERE ($1::text IS NULL OR i.issue_type=$1) AND ($2::text IS NULL OR i.status=$2 OR ($2='pending_review' AND i.status='pending')) AND ($3::boolean IS NULL OR i.is_demo=$3) GROUP BY i.id ORDER BY i.created_at DESC LIMIT 500`,
       [filters.issueType ?? null, filters.status ?? null, filters.demo ?? null],
     );
     return rows.rows.map(incident);
@@ -83,7 +83,7 @@ export class Reporting {
     );
     if (!r.rows[0]) throw new AppError(404, "NOT_FOUND", "Incident not found.");
     const obs = await this.db.query(
-      "SELECT o.*,p.url,p.assessment FROM observations o LEFT JOIN photos p ON p.id=o.photo_id WHERE o.incident_id=$1 ORDER BY o.created_at DESC",
+      "SELECT o.*,COALESCE(p.url,to_jsonb(o)->>'photo_url') url,p.assessment FROM observations o LEFT JOIN photos p ON p.id=o.photo_id WHERE o.incident_id=$1 ORDER BY o.created_at DESC",
       [id],
     );
     return {
@@ -335,7 +335,7 @@ export class Reporting {
       throw new AppError(
         410,
         "DRAFT_EXPIRED",
-        "This confirmation link has expired. Send REPORT again.",
+        "This confirmation link has expired. Send RESUME in your private DrainDispatch iMessage conversation to reopen your latest report without another upload.",
       );
     return {
       id: r.id,
@@ -393,7 +393,7 @@ export class Reporting {
       } else {
         id = randomUUID();
         await c.query(
-          "INSERT INTO incidents(id,latitude,longitude,description,issue_type) VALUES($1,$2,$3,$4,$5)",
+          "INSERT INTO incidents(id,latitude,longitude,description,issue_type,is_demo) VALUES($1,$2,$3,$4,$5,false)",
           [
             id,
             input.latitude,
@@ -461,6 +461,31 @@ export class Reporting {
     const repeated = await this.db.query(
       "SELECT round(latitude::numeric,4) latitude,round(longitude::numeric,4) longitude,count(*)::int count FROM incidents WHERE NOT is_demo GROUP BY 1,2 HAVING count(*)>1 ORDER BY count(*) DESC LIMIT 10",
     );
+    const activityBucket = this.db.timescale
+      ? "time_bucket('1 day',a.occurred_at,timezone => 'UTC')"
+      : "date_trunc('day',a.occurred_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'";
+    const period = (await this.db.query("SELECT date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' end_date,now() current_time")).rows[0];
+    const endDate = new Date(period.end_date);
+    const startDate = new Date(endDate.getTime() - 29 * 86400000);
+    // Thirty UTC calendar days including today's partial day. Observations come from
+    // their own rows, so an initial submission is counted even without a separate event.
+    const activity = await this.db.query(`
+      WITH activity AS (
+        SELECT e.occurred_at,e.event_type FROM incident_events e
+        JOIN incidents i ON i.id=e.incident_id
+        WHERE NOT i.is_demo AND e.event_type IN ('incident_created','status_changed')
+        UNION ALL
+        SELECT o.created_at,'observation_submitted' FROM observations o
+        JOIN incidents i ON i.id=o.incident_id WHERE NOT i.is_demo
+      )
+      SELECT ${activityBucket} date,
+        count(*) FILTER(WHERE a.event_type='incident_created')::int incidents,
+        count(*) FILTER(WHERE a.event_type='observation_submitted')::int observations,
+        count(*) FILTER(WHERE a.event_type='status_changed')::int "statusChanges"
+      FROM activity a
+      WHERE a.occurred_at >= $1::timestamptz AND a.occurred_at <= $2::timestamptz
+      GROUP BY 1 ORDER BY 1
+    `,[startDate.toISOString(),period.current_time]);
     return {
       totalIncidents: summary.total,
       activeIncidents: summary.active,
@@ -471,6 +496,8 @@ export class Reporting {
         count: r.count,
       })),
       overTime: trends.rows,
+      activityOverTime: activity.rows,
+      activityPeriod: { bucket: "day", timeZone: "UTC", days: 30, includesCurrentDay: true, startDate: startDate.toISOString(), endDate: endDate.toISOString() },
       repeatedLocations: repeated.rows,
       databaseMode: this.db.mode,
       timeSeriesEnabled: this.db.timescale,

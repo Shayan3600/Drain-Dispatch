@@ -1,4 +1,4 @@
-import "../config.js";
+import { config as runtimeConfig, validateProductionConfig, ProductionConfigurationError } from "../config.js";
 import { pathToFileURL } from "node:url";
 import {
   Spectrum,
@@ -14,12 +14,20 @@ import type { Followup } from "./notifications.js";
 const MAX_BYTES = 8 * 1024 * 1024;
 const acceptedImages = new Set(["image/jpeg", "image/png", "image/webp"]);
 class ApiRequestError extends Error {}
+class IncomingContentError extends Error {}
+class WorkerConfigurationError extends Error {}
+
+export function incomingErrorResponse(error: unknown): string {
+  return error instanceof IncomingContentError
+    ? error.message
+    : "The attachment could not be read. Send HELP for supported formats.";
+}
 
 function parts(content: Content): { text: string[]; photos: Attachment[] } {
   if (content.type === "text") return { text: [content.text], photos: [] };
   if (content.type === "attachment") {
     if (!acceptedImages.has(content.mimeType.toLowerCase()))
-      throw new Error("Please send a still JPEG, PNG, or WebP photo.");
+      throw new IncomingContentError("Please send a still JPEG, PNG, or WebP photo. For an iPhone HEIC photo, send a JPEG/PNG screenshot or take a new photo with Settings > Camera > Formats > Most Compatible.");
     return { text: [], photos: [content] };
   }
   if (content.type === "group") {
@@ -41,7 +49,7 @@ function parts(content: Content): { text: string[]; photos: Attachment[] } {
 /** Read a provider-owned attachment stream with a hard byte cap, never a user URL. */
 async function boundedPhoto(attachment: Attachment): Promise<Buffer> {
   if (attachment.size !== undefined && attachment.size > MAX_BYTES)
-    throw new Error("Photographs must be 8 MB or smaller.");
+    throw new IncomingContentError("Photographs must be 8 MB or smaller.");
   const stream = await attachment.stream();
   const reader = stream.getReader();
   const chunks: Buffer[] = [];
@@ -51,12 +59,12 @@ async function boundedPhoto(attachment: Attachment): Promise<Buffer> {
       const part = await reader.read();
       if (part.done) break;
       if (!(part.value instanceof Uint8Array))
-        throw new Error(
+        throw new IncomingContentError(
           "The photograph could not be read. Send a JPEG, PNG, or WebP photo.",
         );
       total += part.value.byteLength;
       if (total > MAX_BYTES)
-        throw new Error("Photographs must be 8 MB or smaller.");
+        throw new IncomingContentError("Photographs must be 8 MB or smaller.");
       chunks.push(Buffer.from(part.value));
     }
   } finally {
@@ -78,12 +86,12 @@ export async function normalizeProviderMessage(
   const content = parts(message.content);
   if (!content.text.length && !content.photos.length) return undefined;
   if (content.photos.length > 1)
-    throw new Error(
+    throw new IncomingContentError(
       "Please send one photograph per report so its evidence and location stay together.",
     );
   const text = content.text.join("\n");
   if (text.length > 2000)
-    throw new Error("Please keep your description under 2,000 characters.");
+    throw new IncomingContentError("Please keep your description under 2,000 characters.");
   const space = message.space as Message["space"] & { type?: string };
   return {
     id: message.id,
@@ -137,7 +145,7 @@ export async function forwardToApi(
           response.status === 422
         ) {
           throw new ApiRequestError(
-            "The report could not be accepted. Send a description under 2,000 characters and one still JPEG, PNG, or WebP photo under 8 MB. Send HELP for commands.",
+            "The report could not be accepted. Send a description under 2,000 characters and one still JPEG, PNG, or WebP photo under 8 MB. For iPhone HEIC, send a JPEG/PNG screenshot or use Camera > Formats > Most Compatible for new photos. Send HELP for commands.",
           );
         }
         if (response.status === 429)
@@ -232,21 +240,20 @@ export async function dispatchFollowups(
 }
 
 export async function startWorker(): Promise<void> {
-  const {
-    PHOTON_PROJECT_ID: projectId,
-    PHOTON_PROJECT_SECRET: projectSecret,
-    WORKER_TOKEN: token,
-  } = process.env;
+  validateProductionConfig(process.env, "worker");
+  const projectId = runtimeConfig.spectrumProjectId;
+  const projectSecret = runtimeConfig.spectrumProjectSecret;
+  const token = process.env.WORKER_TOKEN;
   if (!projectId || !projectSecret || !token || token.length < 24)
-    throw new Error(
-      "Configure PHOTON_PROJECT_ID, PHOTON_PROJECT_SECRET, and WORKER_TOKEN (at least 24 characters) in your private .env file.",
+    throw new WorkerConfigurationError(
+      "Configure SPECTRUM_PROJECT_ID, SPECTRUM_PROJECT_SECRET, and WORKER_TOKEN (at least 24 characters) in your private .env file. Legacy PHOTON credentials are also supported.",
     );
   const app = await Spectrum({
     projectId,
     projectSecret,
     providers: [imessage.config()],
     telemetry: false,
-    options: { logLevel: "error" },
+    options: { logLevel: "silent" },
   });
   const config = {
     apiUrl: process.env.API_URL ?? "http://localhost:3001",
@@ -281,7 +288,7 @@ export async function startWorker(): Promise<void> {
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
   console.info(
-    "DrainDispatch Photon worker connected. Incoming reports use the central API.",
+    "DrainDispatch Photon project authenticated; incoming message listener is running through the central API.",
   );
   try {
     for await (const [space, message] of app.messages) {
@@ -292,17 +299,16 @@ export async function startWorker(): Promise<void> {
         try {
           incoming = await normalizeProviderMessage(message);
         } catch (error) {
-          await message.reply(
-            error instanceof Error
-              ? error.message
-              : "The attachment could not be read. Send HELP for supported formats.",
-          );
+          await message.reply(incomingErrorResponse(error));
           return;
         }
         if (!incoming) return;
+        if (incoming.photo) console.info("An incoming Photon photograph was received; central API processing started.");
         try {
           const result = await forwardToApi(incoming, config);
           await message.reply(result.responseText);
+          console.info("An incoming Photon message was processed by the API and its reply send completed.");
+          if (incoming.photo) console.info("The Photon photograph request completed through the API and its reply send completed.");
         } catch (error) {
           // Never log phone numbers, messages, provider errors, or credentials.
           console.error(
@@ -336,7 +342,7 @@ if (
 ) {
   startWorker().catch((error) => {
     console.error(
-      error instanceof Error && error.message.startsWith("Configure ")
+      error instanceof WorkerConfigurationError || error instanceof ProductionConfigurationError
         ? error.message
         : "Photon worker startup failed. Check private credentials and service connectivity.",
     );

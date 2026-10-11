@@ -51,6 +51,20 @@ export interface Stats {
   byCategory: { issueType: IssueType; count: number }[];
   overTime: { date: string; count: number }[];
   repeatedLocations: { latitude: number; longitude: number; count: number }[];
+  activityOverTime?: {
+    date: string;
+    incidents: number;
+    observations: number;
+    statusChanges: number;
+  }[];
+  activityPeriod?: {
+    bucket: "day";
+    timeZone: "UTC";
+    days: number;
+    includesCurrentDay: boolean;
+    startDate?: string;
+    endDate?: string;
+  };
 }
 export interface Weather {
   alerts: {
@@ -73,6 +87,7 @@ export interface Draft {
   photoUrl?: string;
   assessment?: Assessment;
   expiresAt?: string;
+  confirmedIncidentId?: string | null;
 }
 export const categories: Record<IssueType, string> = {
   blocked_drain: "Blocked drain",

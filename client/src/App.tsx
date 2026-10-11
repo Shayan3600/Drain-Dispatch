@@ -24,6 +24,7 @@ import {
 import DrainMap from "./DrainMap";
 import IncidentDetail from "./IncidentDetail";
 import ReportForm from "./ReportForm";
+import ActivityTrend from "./ActivityTrend";
 import { api, date, list } from "./api";
 import {
   categories,
@@ -116,7 +117,9 @@ export default function App() {
     [status, setStatus] = useState("active"),
     [query, setQuery] = useState(""),
     [showDemo, setShowDemo] = useState(false),
-    [mobileNav, setMobileNav] = useState(false);
+    [mobileNav, setMobileNav] = useState(false),
+    [focusedIncident, setFocusedIncident] = useState<Incident>(),
+    [revealSavedReport, setRevealSavedReport] = useState(false);
   const draftToken = useMemo(
     () =>
       new URLSearchParams(location.search).get("draft") ||
@@ -194,6 +197,17 @@ export default function App() {
       color: "amber",
     },
   ];
+  const visibleDemos = filtered.filter(incident => incident.isDemo);
+  const handleCreated = useCallback((incident: Incident) => {
+    setIncidents(current => [incident, ...current.filter(item => item.id !== incident.id)]);
+    if (incident.isDemo) setShowDemo(true);
+    setQuery("");
+    setCategory("all");
+    setStatus("all");
+    setFocusedIncident(incident);
+    setRevealSavedReport(true);
+    void refresh();
+  }, [refresh]);
   function closeReport() {
     setReportOpen(false);
     if (activeDraft) {
@@ -203,6 +217,10 @@ export default function App() {
         "",
         location.pathname.startsWith("/confirm/") ? "/" : location.pathname,
       );
+    }
+    if (revealSavedReport) {
+      setRevealSavedReport(false);
+      requestAnimationFrame(() => document.getElementById("dashboard")?.scrollIntoView({ block: "start" }));
     }
   }
   return (
@@ -358,6 +376,7 @@ export default function App() {
               </span>
             </div>
           ) : null}
+          <p className="metrics-context">Community counts · Real reports only · Demo reports are excluded</p>
           <section className="metrics" aria-label="Measured community activity">
             {metrics.map(({ label, value, icon: Icon, note, color }) => (
               <article className="metric-card" key={label}>
@@ -374,6 +393,12 @@ export default function App() {
               </article>
             ))}
           </section>
+          {showDemo && (
+            <div className="demo-preview-notice" role="status">
+              <span><strong>Demo preview</strong> · {visibleDemos.length} demo reports shown · {visibleDemos.filter(item => item.status !== "closed").length} active · {visibleDemos.filter(item => item.status === "closed").length} closed</span>
+              <small>Demo records are shown on the map. Real-report statistics above remain separate.</small>
+            </div>
+          )}
           <section className="dashboard-section" id="dashboard">
             <div className="section-heading">
               <div>
@@ -419,7 +444,7 @@ export default function App() {
                     aria-label="Search incident descriptions"
                     placeholder="Search the neighborhood…"
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => { setQuery(e.target.value); setFocusedIncident(undefined); }}
                   />
                 </div>
                 <label className="filter-select">
@@ -427,7 +452,7 @@ export default function App() {
                   <select
                     aria-label="Filter by issue type"
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
+                    onChange={(e) => { setCategory(e.target.value); setFocusedIncident(undefined); }}
                   >
                     <option value="all">All concerns</option>
                     {Object.entries(categories).map(([key, label]) => (
@@ -440,7 +465,7 @@ export default function App() {
                 <select
                   aria-label="Filter by incident status"
                   value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                  onChange={(e) => { setStatus(e.target.value); setFocusedIncident(undefined); }}
                 >
                   <option value="active">Active incidents</option>
                   <option value="all">All statuses</option>
@@ -453,10 +478,10 @@ export default function App() {
               </div>
               <div className="map-and-list">
                 <div className="dashboard-map">
-                  <DrainMap incidents={filtered} onSelect={setSelected} />
+                  <DrainMap incidents={filtered} onSelect={setSelected} focus={focusedIncident} />
                   <div className="map-location-label">
                     <MapPin size={14} />
-                    Chapel Hill, NC
+                    {focusedIncident ? "Saved report location" : "Chapel Hill, NC"}
                   </div>
                   <div className="map-legend">
                     <span>
@@ -549,10 +574,11 @@ export default function App() {
                       <input
                         type="checkbox"
                         checked={showDemo}
-                        onChange={(e) => setShowDemo(e.target.checked)}
+                        onChange={(e) => { setShowDemo(e.target.checked); setFocusedIncident(undefined); }}
                       />
                       Include labeled demo reports
                     </label>
+                    {showDemo && <p className="demo-summary">{visibleDemos.length} labeled demo reports match these filters. Demo records are excluded from real statistics.</p>}
                   </div>
                 </aside>
               </div>
@@ -769,6 +795,7 @@ export default function App() {
                 </a>
               </article>
             </div>
+            <ActivityTrend stats={stats} />
           </section>
           <section className="participation-banner">
             <span className="banner-icon">
@@ -822,7 +849,7 @@ export default function App() {
         <ReportForm
           draftToken={activeDraft}
           onClose={closeReport}
-          onCreated={() => void refresh()}
+          onCreated={handleCreated}
         />
       )}{" "}
       {selected && (

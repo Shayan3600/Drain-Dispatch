@@ -10,7 +10,7 @@ Requires Node 22+ (24 recommended).
 
 ```powershell
 npm ci
-Copy-Item .env.example .env
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 # Set separate random WORKER_TOKEN and MODERATOR_TOKEN in .env.
 npm run dev
 ```
@@ -27,9 +27,9 @@ Optional `npm run db:seed` creates three labeled demonstration incidents. Enable
 - Report creation with explicit location confirmation, photo persistence and stable retry protection.
 - Nearby suggestions within 30 meters; human choice before adding to an existing incident.
 - Community observations, photo evidence, status/event history and protected moderation.
-- Measured counts, categories, daily incident trends and approximate recurring areas.
+- Measured counts, categories, daily incident trends, UTC observation/review activity with exact values, and approximate recurring areas.
 - Structured Gemini integration with editable suggestions and clear unavailable state.
-- Real Spectrum SDK worker source: HELP, REPORT, STATUS, NEARBY, OBSERVE, CONSENT and STOP; expiring private location-confirmation drafts.
+- Real Spectrum SDK worker: HELP, REPORT, RESUME, STATUS, NEARBY, OBSERVE, CONSENT and STOP; expiring private location-confirmation drafts. RESUME securely reopens your latest report after a temporary URL changes, preserving saved photos and findings.
 - Consent-based status notification outbox, leases, cancellation and provider dispatch.
 - Official NWS alert context for the Chapel Hill center, with a graceful unavailable state.
 - Responsive Aero design, accessible controls, safe participation guidance and official reporting links.
@@ -46,7 +46,9 @@ npm run test:browser
 
 Browser tests use an isolated temporary PostgreSQL database, never the local/demo database. They exercise report/reload/detail/follow-up, mobile layout, confirmed duplicate consolidation, simulated message-draft confirmation, and correction of mocked AI suggestions with actual photo persistence.
 
-**Live Gemini, Photon, Cloudinary, Tiger Data and public deployment remain unverified until credentials/accounts are configured.** Mocked provider tests do not satisfy sponsor requirements. Outbound status notifications are at least once; a crash after sending but before acknowledgement can repeat an update. Use one Photon line; multi-line routing remains future work.
+Real service authentication and verification results are recorded in [Integration status](docs/integration-status.md). Mocked provider tests do not satisfy sponsor requirements. Outbound status notifications are at least once; a crash after sending but before acknowledgement can repeat an update. Use one Photon line; multi-line routing remains future work.
+
+Before every publication, run `npm run security:scan` and a fully redacted Gitleaks scan of Git history and safe source. Real environment files and downloaded credential files stay private and local. The example file contains only empty settings. Never overwrite an existing `.env` when following fresh-checkout instructions.
 
 ## Activate and deploy
 
@@ -59,6 +61,7 @@ Dockerfile and Railway configuration support an API serving the built client plu
 - [Verified task checklist and remaining work](tasks/todo.md)
 - [Architecture](docs/architecture.md) and [API contract](docs/api-contract.md)
 - [Integration status and official SDK sources](docs/integration-status.md)
+- [Human photo workflow, database coordination and mobile verification evidence](docs/verification-evidence.md)
 - [Two-minute demo script](docs/demo-script.md) and [submission draft / track evidence](docs/submission.md)
 - [Engineering lessons](tasks/lessons.md)
 

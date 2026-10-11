@@ -13,10 +13,10 @@ Built with React, TypeScript, Leaflet, Express and PostgreSQL. Gemini integratio
 - General or Beginner: choose the eligible track according to the official HackNC rules; official track document was not provided, so eligibility is not independently verified.
 - Community: local reporting, multiple observations, duplicate coordination and official-resource links implemented. Do not claim municipal participation.
 - Frutiger Aero Tech: distinctive environmental interface and measured waterway awareness implemented; no invented pollution/flood prevention quantities.
-- Photon: Spectrum source, simulated provider tests and consent-based status notification outbox implemented. **Not live-verified or sponsor-ready** until a real iMessage creates a persisted dashboard report.
-- Gemini: official SDK and structured schema implemented. **Not live-verified** until real representative image tests pass.
-- Tiger Data: PostgreSQL schema, event hypertable migration and time_bucket analytics implemented. **Not connected** until cloud health and query verification pass.
+- Photon: actual iPhone text and photograph, replies and location confirmation created persisted messaging evidence in Tiger Data, independently visible in the dashboard and map with a rendered Cloudinary photograph and Gemini findings. Consenting status-notification delivery remains a separate live check.
+- Gemini: live official SDK image assessment verified on four public reference photographs, with strict schema and editable suggestions. Results and licensing are recorded in photo-validation.md; broader field accuracy is not established.
+- Tiger Data: cloud PostgreSQL authenticated with verified TLS; additive migrations, event hypertable, time_bucket, idempotent report persistence and analytics verified. Existing data was preserved.
 - .Tech: domain not registered; no eligibility claim.
 - Commit Fellowship: working local community prototype; current rules/eligibility still need official confirmation.
 
-Record and rehearse the actual cross-service workflow once credentials are configured. Label any simulated demonstration clearly.
+The full incoming iPhone photo → Photon → Gemini/Cloudinary → confirmed Tiger Data incident → dashboard workflow is technically verified. Temporary HTTPS sessions are suitable for supervised judging tests; durable hosting remains pending. Record and rehearse the actual workflow, and label simulated demonstrations clearly. The [official HackNC site](https://hacknc.com/) identifies the October 9–11 event and beginner track but did not provide the detailed current sponsor-prize rules in the retrieved page. Confirm those with the event's official judging materials before selecting tracks; do not substitute Hack_NCState or older HackNC rules.

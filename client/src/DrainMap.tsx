@@ -22,9 +22,13 @@ function icon(color: string, selected = false) {
 function Controls({
   onPick,
   position,
+  incidents,
+  focus,
 }: {
   onPick?: (location: [number, number]) => void;
   position?: [number, number];
+  incidents: Incident[];
+  focus?: Incident;
 }) {
   const map = useMap();
   useMapEvents({
@@ -35,6 +39,15 @@ function Controls({
   useEffect(() => {
     if (position) map.panTo(position);
   }, [map, position]);
+  const incidentLocations = incidents.map(item => `${item.id}:${item.latitude}:${item.longitude}`).join("|");
+  useEffect(() => {
+    if (onPick || !incidents.length) return;
+    if (focus && incidents.some(item => item.id === focus.id)) {
+      map.setView([focus.latitude, focus.longitude], 15, { animate: false });
+    } else {
+      map.fitBounds(L.latLngBounds(incidents.map(item => [item.latitude, item.longitude] as [number, number])), { padding: [40, 40], maxZoom: 15, animate: false });
+    }
+  }, [map, incidentLocations, focus?.id, onPick]);
   useEffect(() => {
     const id = setTimeout(() => map.invalidateSize(), 180);
     return () => clearTimeout(id);
@@ -47,12 +60,14 @@ export default function DrainMap({
   onPick,
   position,
   small = false,
+  focus,
 }: {
   incidents: Incident[];
   onSelect?: (incident: Incident) => void;
   onPick?: (location: [number, number]) => void;
   position?: [number, number];
   small?: boolean;
+  focus?: Incident;
 }) {
   return (
     <div
@@ -72,7 +87,7 @@ export default function DrainMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Controls onPick={onPick} position={position} />
+        <Controls onPick={onPick} position={position} incidents={incidents} focus={focus} />
         {incidents.map((incident) => (
           <Marker
             key={incident.id}
@@ -85,6 +100,7 @@ export default function DrainMap({
                 : incident.issueType === "standing_water"
                   ? "#4b94c3"
                   : "#d9923a",
+              incident.id === focus?.id,
             )}
             eventHandlers={{ click: () => onSelect?.(incident) }}
           >

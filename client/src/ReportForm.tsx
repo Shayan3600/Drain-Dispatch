@@ -46,7 +46,8 @@ export default function ReportForm({
     [sameLocation, setSameLocation] = useState(false),
     [result, setResult] = useState<Incident>();
   const [draftLoading, setDraftLoading] = useState(Boolean(draftToken)),
-    [draftInvalid, setDraftInvalid] = useState(false);
+    [draftInvalid, setDraftInvalid] = useState(false),
+    [alreadySaved, setAlreadySaved] = useState(false);
   const [nearbyState, setNearbyState] = useState<
       "idle" | "loading" | "ready" | "error"
     >("idle"),
@@ -55,7 +56,14 @@ export default function ReportForm({
   useEffect(() => {
     if (!draftToken) return;
     api<Draft>(`/report-drafts/${encodeURIComponent(draftToken)}`)
-      .then((d) => {
+      .then(async (d) => {
+        if (d.confirmedIncidentId) {
+          const saved = await api<Incident>(`/incidents/${d.confirmedIncidentId}`);
+          setAlreadySaved(true);
+          setResult(saved);
+          onCreated(saved);
+          return;
+        }
         setDescription(d.description || "");
         setIssueType(
           d.issueType || d.assessment?.suggestedCategory || "blocked_drain",
@@ -69,7 +77,7 @@ export default function ReportForm({
         setDraftInvalid(true);
       })
       .finally(() => setDraftLoading(false));
-  }, [draftToken]);
+  }, [draftToken, onCreated]);
   useEffect(() => {
     setConfirmed(false);
     setMatch(undefined);
@@ -110,7 +118,9 @@ export default function ReportForm({
       !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
       file.size > 8 * 1024 * 1024
     ) {
-      setError("Choose a JPEG, PNG, or WebP image under 8 MB.");
+      setError(
+        "Choose a JPEG, PNG, or WebP image under 8 MB. For iPhone HEIC, send a JPEG/PNG screenshot or take a new photo using Camera > Formats > Most Compatible.",
+      );
       return;
     }
     setBusy("Uploading photo");
@@ -232,7 +242,7 @@ export default function ReportForm({
     <Modal
       title={
         result
-          ? "Observation received"
+          ? alreadySaved ? "Report already saved" : "Observation received"
           : draftToken
             ? "Confirm your message report"
             : "Report a drainage concern"
@@ -245,13 +255,13 @@ export default function ReportForm({
           <div className="success-icon">
             <CheckCircle2 size={44} />
           </div>
-          <h3>A clearer picture, thanks to you.</h3>
+          <h3>{alreadySaved ? "Your report is already on the map." : "A clearer picture, thanks to you."}</h3>
           <p>
-            Your{" "}
+            {alreadySaved ? "Open the dashboard to view its observations and recorded status." : <>Your{" "}
             {match
               ? "observation has been added to the existing incident"
               : "report is saved and ready for community review"}
-            .
+            .</>}
           </p>
           <div className="reference">
             REPORT REFERENCE <strong>{result.id}</strong>
@@ -380,7 +390,11 @@ export default function ReportForm({
                       className="visually-hidden"
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) => void upload(e.target.files?.[0])}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        void upload(file);
+                      }}
                       disabled={!!busy}
                     />
                     <button
@@ -395,6 +409,18 @@ export default function ReportForm({
                       AI helps describe visible evidence. It cannot identify the
                       exact location or confirm the cause of flooding.
                     </p>
+                    <details className="photo-note photo-help">
+                      <summary>Using an iPhone photo?</summary>
+                      <p>
+                        JPEG and PNG screenshots work here. For new JPEG photos,
+                        open Settings → Camera → Formats → Most Compatible.
+                        Existing HEIC files need conversion before upload.
+                        {" "}
+                        <a href="https://support.apple.com/116944" target="_blank" rel="noreferrer">
+                          Apple photo format guide
+                        </a>
+                      </p>
+                    </details>
                   </div>
                 </div>
               )}
