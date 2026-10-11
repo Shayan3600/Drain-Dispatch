@@ -49,6 +49,7 @@ export default function CityReview() {
   const [detailKey, setDetailKey] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [detailStale, setDetailStale] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [historyLoading, setHistoryLoading] = useState(false);
   const detailIdentity = useRef("");
@@ -71,14 +72,14 @@ export default function CityReview() {
     const controller = new AbortController();
     const sameIncident = detailIdentity.current === selectionKey;
     detailIdentity.current = selectionKey;
-    if (!sameIncident) { setDetail(undefined); setHistory([]); setEvidenceUpdatedAt(undefined); }
+    if (!sameIncident) { setDetail(undefined); setHistory([]); setEvidenceUpdatedAt(undefined); setDetailStale(false); }
     setDetailKey(selectionKey);
     setDetailLoading(true); setDetailError(""); setHistoryError("");
     setHistoryLoading(true);
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
     void data.getIncident(selectedId, signal)
-      .then(item => { if (!controller.signal.aborted) { setDetail(item); setEvidenceUpdatedAt(new Date()); } })
-      .catch(reason => { if (!controller.signal.aborted) setDetailError(reason instanceof Error ? reason.message : "Evidence could not be loaded."); })
+      .then(item => { if (!controller.signal.aborted) { setDetail(item); setEvidenceUpdatedAt(new Date()); setDetailStale(false); } })
+      .catch(reason => { if (!controller.signal.aborted) { setDetailStale(true); setDetailError(reason instanceof Error ? reason.message : "Evidence could not be loaded."); } })
       .finally(() => { if (!controller.signal.aborted) setDetailLoading(false); });
     void data.getHistory(selectedId, signal)
       .then(items => { if (!controller.signal.aborted) setHistory(items); })
@@ -138,7 +139,7 @@ export default function CityReview() {
             {detailKey === selectionKey && detailError && <div className="cr-error" role="alert"><p>{detailError}</p>{currentDetail && <p>Displayed evidence may be out of date.</p>}<button className="cr-button" onClick={() => setDetailRevision(value => value + 1)}>Retry evidence</button></div>}
             {currentDetail && <>
               <h3>{categories[currentDetail.issueType]} {currentDetail.isDemo && <span className="cr-demo">{mode === "fixtures" ? "SYNTHETIC DEMO" : "DEMO / TEST"}</span>}</h3><p>{currentDetail.description}</p>
-              {evidenceUpdatedAt && <p className="cr-note">Evidence last loaded {timestamp(evidenceUpdatedAt.toISOString())}{detailError ? " · STALE" : ""}</p>}
+              {evidenceUpdatedAt && <p className="cr-note">Evidence last loaded {timestamp(evidenceUpdatedAt.toISOString())}{detailStale ? " · STALE" : ""}</p>}
               <dl className="cr-facts"><div><dt>Community status</dt><dd>{statuses[currentDetail.status]}</dd></div><div><dt>Coordinates</dt><dd>{currentDetail.latitude.toFixed(5)}, {currentDetail.longitude.toFixed(5)}</dd></div><div><dt>Submissions</dt><dd>{currentDetail.observationCount} (not unique people)</dd></div><div><dt>Reported</dt><dd>{timestamp(currentDetail.createdAt)}</dd></div></dl>
               <a href={`https://www.openstreetmap.org/?mlat=${currentDetail.latitude}&mlon=${currentDetail.longitude}#map=18/${currentDetail.latitude}/${currentDetail.longitude}`} target="_blank" rel="noreferrer">Open location in map ↗</a>
               <h3>Observation evidence</h3>
@@ -151,7 +152,7 @@ export default function CityReview() {
               <h3>Community history</h3>
               {historyLoading && <p role="status">Loading community history…</p>}
               {historyError ? <p role="status">{historyError}</p> : <ul className="cr-history">{history.map((event, index) => <li key={event.id ?? index}><strong>{eventNames[event.eventType] ?? event.eventType.replaceAll("_", " ")}</strong><small>{timestamp(event.createdAt ?? event.timestamp)} · {event.source ?? "Source unavailable"}</small></li>)}</ul>}
-              <PacketPreview key={selectionKey} incident={currentDetail} history={history} evidenceStale={Boolean(error || detailError)} historyState={historyLoading ? "loading" : historyError ? "unavailable" : "ready"} />
+              <PacketPreview key={selectionKey} incident={currentDetail} history={history} evidenceStale={Boolean(error || detailStale)} historyState={historyLoading ? "loading" : historyError ? "unavailable" : "ready"} />
             </>}
           </>}
         </section>
