@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import type { Database } from "./database.js";
 import { seedCityShowcase } from "./cityShowcase.js";
+import { cityReferencePhotos } from "./cityReferencePhotos.js";
 import { Reporting } from "../services/reporting.js";
 import request from "supertest";
 import { createApp } from "../app.js";
@@ -56,5 +57,37 @@ test("city showcase is local-only, balanced, additive, repeatable, and excluded 
     await reporting.create({latitude:35.9,longitude:-79,issueType:"other",description:"Existing unrelated test record",locationConfirmed:true,idempotencyKey:"existing-unrelated-record"});
     await seedCityShowcase(db,anchor);
     assert.equal((await reporting.list({demo:false})).length,1);
+  } finally { await db.close(); }
+});
+
+test("reference-photo showcase includes all ten category-matched photos without changing saved scenarios",async()=>{
+  const engine = new PGlite();
+  const db:Database={mode:"local-postgresql",timescale:false,query:async(s,p)=>await engine.query(s,p) as any,transaction:fn=>engine.transaction(tx=>fn({query:async(s,p)=>await tx.query(s,p) as any})),close:()=>engine.close()};
+  await engine.exec(await readFile(new URL("../../sql/001_init.sql",import.meta.url),"utf8"));
+  try {
+    const anchor = new Date("2026-10-11T12:00:00Z");
+    const result = await seedCityShowcase(db,anchor,{referencePhotos:true});
+    assert.equal(result.photos.length,48);
+    assert.equal(result.photos.filter(photo=>photo.referenceFilename).length,36);
+    assert.deepEqual(new Set(result.photos.flatMap(photo=>photo.referenceFilename ? [photo.referenceFilename] : [])),new Set(cityReferencePhotos.map(photo=>photo.filename)));
+    for (const photo of result.photos) if (photo.referenceFilename) {
+      assert.equal(cityReferencePhotos.find(reference=>reference.filename===photo.referenceFilename)?.category,photo.category);
+    }
+    const reporting = new Reporting(db);
+    const reports = await reporting.list({demo:true});
+    assert.equal(reports.length,48);
+    assert.equal(reports.filter(report=>report.hasPhoto).length,24);
+    assert.equal((await reporting.stats()).totalIncidents,0);
+    const stored = await db.query("SELECT p.url,p.mime_type,o.description FROM photos p JOIN observations o ON o.photo_id=p.id");
+    for (const photo of stored.rows) if (photo.mime_type==="image/png") {
+      assert.match(photo.description,/Original location and capture date unknown/);
+      assert.match(photo.description,/not evidence of this location, submission, or a change over time/);
+    }
+    assert.equal(stored.rows.filter(photo=>photo.mime_type==="image/png").length,36);
+    await seedCityShowcase(db,new Date(anchor.getTime()+3600000),{referencePhotos:true});
+    assert.equal(Number((await db.query("SELECT count(*) n FROM photos")).rows[0].n),48);
+    await assert.rejects(()=>seedCityShowcase(db,anchor),/different photo set/);
+    assert.deepEqual((await db.query("SELECT p.url,p.mime_type,o.description FROM photos p JOIN observations o ON o.photo_id=p.id")).rows,stored.rows);
+    assert.equal(Number((await db.query("SELECT count(*) n FROM notification_outbox")).rows[0].n),0);
   } finally { await db.close(); }
 });

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Database } from "./database.js";
+import { cityReferencePhotos } from "./cityReferencePhotos.js";
 
 const namespace = "city-showcase-v1";
 export const showcaseCategories = ["blocked_drain", "standing_water", "damaged_drain", "other"] as const;
@@ -22,10 +23,10 @@ function id(key: string) {
   const hex = createHash("sha256").update(`${namespace}:${key}`).digest("hex");
   return `${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-8${hex.slice(17,20)}-${hex.slice(20,32)}`;
 }
-export interface ShowcasePhoto { filename: string; category: typeof showcaseCategories[number]; label: string }
+export interface ShowcasePhoto { filename: string; category: typeof showcaseCategories[number]; label: string; referenceFilename?: string }
 
 /** Local-only deterministic, additive fixtures. Never calls AI, messaging, or city workflows. */
-export async function seedCityShowcase(db: Database, anchor = new Date()) {
+export async function seedCityShowcase(db: Database, anchor = new Date(), options: { referencePhotos?: boolean } = {}) {
   if (db.mode !== "local-postgresql") throw new Error("City showcase refuses non-local databases.");
   if (!Number.isFinite(anchor.getTime())) throw new Error("Invalid demo timestamp.");
   const photos: ShowcasePhoto[] = [];
@@ -36,6 +37,13 @@ export async function seedCityShowcase(db: Database, anchor = new Date()) {
         for (let variant=0; variant<4; variant++) {
           const index = categoryIndex*12+statusIndex*4+variant;
           const reference = `CITY DEMO ${String(index+1).padStart(2,"0")}`;
+          const makePhoto = (observation: number): ShowcasePhoto => {
+            const category = showcaseCategories[categoryIndex];
+            const candidates = options.referencePhotos ? cityReferencePhotos.filter(photo => photo.category === category) : [];
+            // Cycle within the matching concern only. Reuse is illustrative, not independent evidence.
+            const photo = candidates.length ? candidates[(statusIndex*4+(variant===0 ? 0 : observation+1))%candidates.length] : undefined;
+            return {filename:photo?.filename ?? `${namespace}-${String(index+1).padStart(2,"0")}-${observation+1}.svg`,category,label:`${reference} / submission ${observation+1}`,referenceFilename:photo?.filename};
+          };
           const incidentId = id(`incident:${index}`);
           const existing = await c.query("SELECT is_demo,description FROM incidents WHERE id=$1",[incidentId]);
           if (existing.rows.length && (!existing.rows[0].is_demo || !existing.rows[0].description.startsWith(reference))) {
@@ -44,7 +52,10 @@ export async function seedCityShowcase(db: Database, anchor = new Date()) {
           // Preserve the entire saved scenario on reruns, including its original dates.
           if (existing.rows.length) {
             if (variant%2===0) for (let observation=0; observation<=variant; observation++) {
-              photos.push({filename:`${namespace}-${String(index+1).padStart(2,"0")}-${observation+1}.svg`,category:showcaseCategories[categoryIndex],label:`${reference} / submission ${observation+1}`});
+              const photo = makePhoto(observation);
+              const saved = await c.query("SELECT url FROM photos WHERE id=$1",[id(`photo:${index}:${observation}`)]);
+              if (saved.rows[0]?.url !== `/uploads/${photo.filename}`) throw new Error("Existing demo uses a different photo set. Start a fresh local showcase instead.");
+              photos.push(photo);
             }
             continue;
           }
@@ -67,16 +78,21 @@ export async function seedCityShowcase(db: Database, anchor = new Date()) {
             const observationId = id(`observation:${index}:${observation}`);
             const at = new Date(created+observation*3600000);
             const photoId = hasPhoto && observation<=variant ? id(`photo:${index}:${observation}`) : null;
+            const photo = photoId ? makePhoto(observation) : undefined;
             if (photoId) {
-              const filename = `${namespace}-${String(index+1).padStart(2,"0")}-${observation+1}.svg`;
-              photos.push({filename,category:issueType,label:`${reference} / submission ${observation+1}`});
+              const filename = photo!.filename;
+              photos.push(photo!);
               await c.query(`INSERT INTO photos(id,url,storage_key,mime_type,created_at)
-                VALUES($1,$2,$3,'image/svg+xml',$4) ON CONFLICT(id) DO NOTHING`,
-              [photoId,`/uploads/${filename}`,`demo:${filename}`,at]);
+                VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO NOTHING`,
+              [photoId,`/uploads/${filename}`,`demo:${filename}`,photo!.referenceFilename ? "image/png" : "image/svg+xml",at]);
             }
+            const referencePhoto = cityReferencePhotos.find(item=>item.filename===photo?.referenceFilename);
+            const photoDescription = referencePhoto
+              ? `User-supplied reference photograph: ${referencePhoto.description} Original location and capture date unknown. Reused for illustrative demo scenarios; not evidence of this location, submission, or a change over time.`
+              : photoId ? "Attached image is a labelled illustration, not a photograph." : "No photo attached.";
             await c.query(`INSERT INTO observations(id,incident_id,description,source,photo_id,created_at)
               VALUES($1,$2,$3,'demo',$4,$5) ON CONFLICT(id) DO NOTHING`,
-            [observationId,incidentId,`${reference}: synthetic ${observation===0 ? "initial observation" : `follow-up ${observation}`} — ${observation%2===0 ? "scenario condition remains visible" : "extent uncertain; further human review needed"}. ${photoId ? "Attached image is a labelled illustration, not a photograph." : "No photo attached."} No resident, official inspection, or repair is implied.`,photoId,at]);
+            [observationId,incidentId,`${reference}: synthetic ${observation===0 ? "initial observation" : `follow-up ${observation}`} — ${observation%2===0 ? "scenario condition remains visible" : "extent uncertain; further human review needed"}. ${photoDescription} No resident, official inspection, or repair is implied.`,photoId,at]);
             await c.query(`INSERT INTO incident_events(id,incident_id,event_type,source,metadata,occurred_at)
               VALUES($1,$2,$3,'demo',$4,$5) ON CONFLICT(id,occurred_at) DO NOTHING`,
             [id(`event:${index}:observation:${observation}`),incidentId,observation===0 ? "incident_created" : "observation_added",JSON.stringify({demo:true,scenario:reference}),at]);
